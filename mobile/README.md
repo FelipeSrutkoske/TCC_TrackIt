@@ -1,0 +1,1 @@
+Parte mobile da aplicacao
