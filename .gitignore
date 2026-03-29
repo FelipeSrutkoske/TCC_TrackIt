@@ -11,7 +11,8 @@
 !.yarn/versions
 
 # testing
-/coverage
+**/coverage
+**/test-results
 
 # next.js
 **/.next/
@@ -22,6 +23,8 @@
 
 # misc
 .DS_Store
+.vscode/
+.idea/
 *.pem
 
 # debug
@@ -29,6 +32,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pnpm-debug.log*
+.eslintcache
 
 # env files
 .env*
@@ -56,3 +61,11 @@ env/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend
+backend/.env
+backend/node_modules
+backend/dist
+backend/coverage
+backend/test-results
+
