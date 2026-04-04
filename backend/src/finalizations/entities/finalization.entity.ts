@@ -35,10 +35,22 @@ export class Finalization {
   @Column({ name: 'foto_local_url', length: 500, nullable: true })
   photoUrl: string;
 
-  @Column({ name: 'latitude_finalizacao', type: 'decimal', precision: 10, scale: 8, nullable: true })
+  @Column({
+    name: 'latitude_finalizacao',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
   latitude: number;
 
-  @Column({ name: 'longitude_finalizacao', type: 'decimal', precision: 11, scale: 8, nullable: true })
+  @Column({
+    name: 'longitude_finalizacao',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
   longitude: number;
 
   @CreateDateColumn({ name: 'data_hora_finalizacao' })

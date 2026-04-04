@@ -1,6 +1,26 @@
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { TipoOcorrencia } from '../entities/occurrence.entity';
+
 export class CreateOccurrenceDto {
+  @IsNotEmpty()
+  @IsNumber()
   entregaId: number;
+
+  @IsOptional()
+  @IsNumber()
   motoristaId?: number;
-  tipo: 'cliente_ausente' | 'endereco_nao_encontrado' | 'recusa' | 'avaria' | 'outro';
+
+  @IsNotEmpty()
+  @IsEnum(TipoOcorrencia)
+  tipo: TipoOcorrencia;
+
+  @IsOptional()
+  @IsString()
   descricao?: string;
 }

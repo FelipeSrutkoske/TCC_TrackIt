@@ -2,7 +2,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('trackit_token');
+  const token = localStorage.getItem('trackit_token');
+  if (token) return token;
+  const match = document.cookie.match(new RegExp('(^| )trackit_auth_token=([^;]+)'));
+  if (match) return match[2];
+  return null;
 }
 
 export async function apiFetch<T = unknown>(

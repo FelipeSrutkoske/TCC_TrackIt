@@ -42,10 +42,22 @@ export class Occurrence {
   @Column({ name: 'foto_prova_url', length: 500, nullable: true })
   fotoProvaUrl: string;
 
-  @Column({ name: 'latitude_ocorrencia', type: 'decimal', precision: 10, scale: 8, nullable: true })
+  @Column({
+    name: 'latitude_ocorrencia',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
   latitude: number;
 
-  @Column({ name: 'longitude_ocorrencia', type: 'decimal', precision: 11, scale: 8, nullable: true })
+  @Column({
+    name: 'longitude_ocorrencia',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
   longitude: number;
 
   @CreateDateColumn({ name: 'data_hora' })

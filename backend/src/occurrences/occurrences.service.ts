@@ -27,7 +27,8 @@ export class OccurrencesService {
       where: { id },
       relations: ['delivery'],
     });
-    if (!occurrence) throw new NotFoundException(`Ocorrência #${id} não encontrada`);
+    if (!occurrence)
+      throw new NotFoundException(`Ocorrência #${id} não encontrada`);
     return occurrence;
   }
 

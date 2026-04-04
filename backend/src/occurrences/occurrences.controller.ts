@@ -1,13 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { OccurrencesService } from './occurrences.service';
+import { CreateOccurrenceDto } from './dto/create-occurrence.dto';
 import { Occurrence } from './entities/occurrence.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('occurrences')
 export class OccurrencesController {
   constructor(private readonly occurrencesService: OccurrencesService) {}
 
   @Post()
-  create(@Body() body: Partial<Occurrence>) {
+  create(@Body() body: CreateOccurrenceDto) {
     return this.occurrencesService.create(body);
   }
 

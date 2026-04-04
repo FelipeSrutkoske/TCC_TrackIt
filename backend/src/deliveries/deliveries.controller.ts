@@ -6,15 +6,20 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { DeliveriesService } from './deliveries.service';
+import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { UpdateDeliveryDto } from './dto/update-delivery.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('deliveries')
 export class DeliveriesController {
   constructor(private readonly deliveriesService: DeliveriesService) {}
 
   @Post()
-  create(@Body() body: Record<string, unknown>) {
+  create(@Body() body: CreateDeliveryDto) {
     return this.deliveriesService.create(body);
   }
 
@@ -34,13 +39,8 @@ export class DeliveriesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
-    // Aceita motoristaId como alias de driverId (compatibilidade com o frontend)
-    const data = { ...body };
-    if (data.motoristaId !== undefined) {
-      data.driverId = data.motoristaId;
-      delete data.motoristaId;
-    }
+  update(@Param('id') id: string, @Body() data: UpdateDeliveryDto) {
+    // A lógica de motoristaId foi movida para o service para termos controllers mais limpos.
     return this.deliveriesService.update(+id, data);
   }
 

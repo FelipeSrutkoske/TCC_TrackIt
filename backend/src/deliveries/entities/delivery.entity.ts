@@ -8,8 +8,8 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Driver } from '../../users/entities/driver.entity';
-import type { Occurrence } from '../../occurrences/entities/occurrence.entity';
-import type { Finalization } from '../../finalizations/entities/finalization.entity';
+import { Occurrence } from '../../occurrences/entities/occurrence.entity';
+import { Finalization } from '../../finalizations/entities/finalization.entity';
 
 export enum StatusEntrega {
   AGUARDANDO_MOTORISTA = 'AGUARDANDO_MOTORISTA',
@@ -43,9 +43,9 @@ export class Delivery {
   })
   status: StatusEntrega;
 
-  @OneToMany('Occurrence', (occurrence: Occurrence) => occurrence.delivery)
+  @OneToMany(() => Occurrence, (occurrence) => occurrence.delivery)
   occurrences: Occurrence[];
 
-  @OneToOne('Finalization', (finalization: Finalization) => finalization.delivery)
+  @OneToOne(() => Finalization, (finalization) => finalization.delivery)
   finalization: Finalization;
 }

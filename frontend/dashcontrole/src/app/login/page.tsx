@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "../components/Header";
 import { authService } from "@/services/auth.service";
 import { usersService } from "@/services/users.service";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function LoginPage() {
   const [isLoginFlow, setIsLoginFlow] = useState(true);
+  const { addToast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      router.push("/");
+    }
+  }, [router]);
   
   // States para o form
   const [email, setEmail] = useState("");
@@ -15,17 +24,15 @@ export default function LoginPage() {
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState("DASHBOARD");
 
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorStatus(null);
     try {
       if (isLoginFlow) {
         await authService.login({ email, senha });
+        addToast("Acesso autorizado! Redirecionando...", "success");
         router.push("/");
       } else {
         await usersService.create({ 
@@ -34,12 +41,12 @@ export default function LoginPage() {
           senha, 
           tipoUsuario: tipo as "ADMIN" | "DASHBOARD" | "MOTORISTA" 
         });
-        alert("Usuário criado com sucesso. Faça seu login.");
+        addToast("Usuário criado com sucesso. Faça seu login.", "success");
         setIsLoginFlow(true);
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
-      setErrorStatus(errorMessage);
+      addToast(errorMessage, "error");
     } finally {
       setLoading(false);
     }
@@ -69,11 +76,6 @@ export default function LoginPage() {
 
            {/* Corpo do Form */}
            <div className="p-8">
-             {errorStatus && (
-               <div className="mb-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl p-3 text-sm text-center">
-                 {errorStatus}
-               </div>
-             )}
              <form onSubmit={handleSubmit} className="space-y-4">
                 
                 {!isLoginFlow && (

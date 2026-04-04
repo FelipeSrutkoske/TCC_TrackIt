@@ -108,8 +108,8 @@ function ProgressBar({ label, value, max, color }: { label: string; value: numbe
 }
 
 // ── Gráfico de barras horizontais ────────────────────────────
-function HorizontalBar({ items }: { items: { label: string; value: number; color: string }[] }) {
-  const max = Math.max(...items.map(i => i.value), 1);
+function HorizontalBar({ items, total }: { items: { label: string; value: number; color: string }[]; total: number }) {
+  const max = total || 1;
   return (
     <div className="space-y-3">
       {items.map((item) => (
@@ -209,7 +209,7 @@ export default function DashboardPage() {
             <h3 className="text-base font-bold text-[#1f2320] mb-6">Comparativo por Categoria</h3>
             {loading
               ? <div className="h-40 flex items-center justify-center text-sm text-[#748071]">Carregando...</div>
-              : <HorizontalBar items={barData} />
+              : <HorizontalBar items={barData} total={stats?.total ?? 0} />
             }
           </article>
         </section>

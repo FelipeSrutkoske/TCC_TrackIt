@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Sidebar } from "./components/Sidebar";
+import { ToastProvider } from "../contexts/ToastContext";
 
 export const metadata = {
   title: "TrackIt",
@@ -31,14 +32,15 @@ export default function RootLayout({
               O scroll acontece só no page-body (div filho de cada página).
             */}
             <div className="route-frame flex flex-col flex-1 min-h-0">
-
-              {/*
-                `children` renderiza cada página.
-                Cada página tem:
-                  - <Header /> com sticky top-0
-                  - <div className="page-body"> com o conteúdo scrollável
-              */}
-              {children}
+              <ToastProvider>
+                {/*
+                  `children` renderiza cada página.
+                  Cada página tem:
+                    - <Header /> com sticky top-0
+                    - <div className="page-body"> com o conteúdo scrollável
+                */}
+                {children}
+              </ToastProvider>
 
               {/* Footer fixo fora do scroll, mas DENTRO da moldura visual */}
               <footer className="shrink-0 px-6 py-3 flex justify-between items-center text-[10px] text-[#6f786d] uppercase tracking-widest font-medium bg-[var(--surface-2)] border-t border-[var(--border)] rounded-b-xl">

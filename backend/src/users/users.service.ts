@@ -38,7 +38,10 @@ export class UsersService {
       .getOne();
   }
 
-  async update(id: number, data: Partial<User> & { senha?: string }): Promise<User> {
+  async update(
+    id: number,
+    data: Partial<User> & { senha?: string },
+  ): Promise<User> {
     const user = await this.findOne(id);
     if (data.senha) {
       data.senha = await bcrypt.hash(data.senha, 10);

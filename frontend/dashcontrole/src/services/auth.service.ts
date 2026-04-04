@@ -24,6 +24,8 @@ export const authService = {
     if (typeof window !== 'undefined') {
       localStorage.setItem('trackit_token', data.access_token);
       localStorage.setItem('trackit_user', JSON.stringify(data.user));
+      // Save in cookies for Next.js middleware
+      document.cookie = `trackit_auth_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
     }
     return data;
   },
@@ -32,6 +34,7 @@ export const authService = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('trackit_token');
       localStorage.removeItem('trackit_user');
+      document.cookie = `trackit_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     }
   },
 
