@@ -30,6 +30,7 @@ Dev.MD
 .vscode/
 .idea/
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
