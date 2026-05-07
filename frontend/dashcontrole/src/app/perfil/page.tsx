@@ -101,7 +101,8 @@ export default function PerfilPage() {
               <h2 className="text-2xl font-bold text-[#1f2320]">{user.nome}</h2>
               <div className="flex items-center gap-3 mt-1.5">
                 <span className="text-sm text-[#5f695d] flex items-center gap-1">
-                  ✉️ {user.email}
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  {user.email}
                 </span>
                 <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#4f654b]/10 text-[#4f654b] border border-[#4f654b]/20">
                   {user.tipoUsuario}

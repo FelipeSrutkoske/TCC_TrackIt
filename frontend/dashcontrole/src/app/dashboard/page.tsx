@@ -58,7 +58,23 @@ function DonutChart({ slices, size = 180, title }: { slices: DonutSlice[]; size?
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-row items-center justify-start pl-4 sm:pl-10 w-full gap-8 sm:gap-16">
+      {/* Legenda Vertical na Esquerda */}
+      <div className="flex flex-col gap-y-4">
+        {slices.map((sl) => (
+          <div key={sl.label} className="flex items-center gap-2 text-sm text-[#5f695d] transition-opacity"
+            style={{ opacity: hovered === null || hovered === sl.label ? 1 : 0.5 }}
+            onMouseEnter={() => setHovered(sl.label)} onMouseLeave={() => setHovered(null)}>
+            <div className="w-3 h-3 rounded-full shadow-sm shrink-0" style={{ background: sl.color }} />
+            <span>
+              <span className="font-medium">{sl.label}:</span>
+              <span className="font-bold text-[#1f2320] ml-1">{sl.value}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      
+      {/* Gráfico */}
       <div className="relative">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {paths.map((p, i) => p && (
@@ -81,18 +97,6 @@ function DonutChart({ slices, size = 180, title }: { slices: DonutSlice[]; size?
             total
           </text>
         </svg>
-      </div>
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-x-5 gap-y-3 justify-center">
-        {slices.map((sl) => (
-          <div key={sl.label} className="flex items-center gap-2 text-sm text-[#5f695d] transition-opacity"
-            style={{ opacity: hovered === null || hovered === sl.label ? 1 : 0.5 }}
-            onMouseEnter={() => setHovered(sl.label)} onMouseLeave={() => setHovered(null)}>
-            <div className="w-3 h-3 rounded-full shadow-sm" style={{ background: sl.color }} />
-            <span>{sl.label}</span>
-            <span className="font-bold text-[#1f2320] ml-1">{sl.value}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -256,27 +260,30 @@ export default function DashboardPage() {
 
           {/* Cards Rápidos de Eficiência */}
           <article className="lg:col-span-1 space-y-4">
-            <div className="rounded-xl bg-[#4d6a2f] p-5 text-white shadow-md flex items-center gap-4">
-               <div className="p-3 bg-white/10 rounded-lg"><Icons.Trending /></div>
+            <div className="relative overflow-hidden rounded-xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+               <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#4d6a2f]" />
+               <div className="p-3 bg-[#4d6a2f]/10 rounded-lg"><Icons.Trending /></div>
                <div>
-                 <p className="text-xs font-bold uppercase tracking-wider text-white/80 mb-1">Eficiência Geral</p>
-                 <p className="text-2xl font-bold">{loading ? "..." : `${taxa}%`}</p>
+                 <p className="text-xs font-bold uppercase tracking-wider text-[#748071] mb-1">Eficiência Geral</p>
+                 <p className="text-2xl font-bold text-[#1f2320]">{loading ? "..." : `${taxa}%`}</p>
                </div>
             </div>
             
-            <div className="rounded-xl bg-[#2563eb] p-5 text-white shadow-md flex items-center gap-4">
-               <div className="p-3 bg-white/10 rounded-lg"><Icons.Route /></div>
+            <div className="relative overflow-hidden rounded-xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+               <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#2563eb]" />
+               <div className="p-3 bg-[#2563eb]/10 rounded-lg"><Icons.Route /></div>
                <div>
-                 <p className="text-xs font-bold uppercase tracking-wider text-white/80 mb-1">Em Andamento</p>
-                 <p className="text-2xl font-bold">{loading ? "..." : stats?.emRota ?? 0}</p>
+                 <p className="text-xs font-bold uppercase tracking-wider text-[#748071] mb-1">Em Andamento</p>
+                 <p className="text-2xl font-bold text-[#1f2320]">{loading ? "..." : stats?.emRota ?? 0}</p>
                </div>
             </div>
 
-            <div className="rounded-xl bg-[#d97706] p-5 text-white shadow-md flex items-center gap-4">
-               <div className="p-3 bg-white/10 rounded-lg"><Icons.Wait /></div>
+            <div className="relative overflow-hidden rounded-xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+               <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#d97706]" />
+               <div className="p-3 bg-[#d97706]/10 rounded-lg"><Icons.Wait /></div>
                <div>
-                 <p className="text-xs font-bold uppercase tracking-wider text-white/80 mb-1">Fila de Espera</p>
-                 <p className="text-2xl font-bold">{loading ? "..." : stats?.pendentes ?? 0}</p>
+                 <p className="text-xs font-bold uppercase tracking-wider text-[#748071] mb-1">Fila de Espera</p>
+                 <p className="text-2xl font-bold text-[#1f2320]">{loading ? "..." : stats?.pendentes ?? 0}</p>
                </div>
             </div>
           </article>
