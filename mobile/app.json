@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "TrackIt Mobile",
+    "slug": "trackit-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.trackit.mobile"
+    }
+  }
+}

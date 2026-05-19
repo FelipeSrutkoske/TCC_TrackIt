@@ -12,6 +12,9 @@ import { DeliveriesService } from './deliveries.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MobileDriverGuard } from '../auth/mobile-driver.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @UseGuards(JwtAuthGuard)
 @Controller('deliveries')
@@ -33,9 +36,27 @@ export class DeliveriesController {
     return this.deliveriesService.getStats();
   }
 
+  @Get('me')
+  @UseGuards(MobileDriverGuard)
+  getCurrent(@CurrentUser() user: AuthenticatedUser) {
+    return this.deliveriesService.findCurrentByUser(user.id);
+  }
+
+  @Get('me/history')
+  @UseGuards(MobileDriverGuard)
+  getHistory(@CurrentUser() user: AuthenticatedUser) {
+    return this.deliveriesService.findHistoryByUser(user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.deliveriesService.findOne(+id);
+  }
+
+  @Patch(':id/start')
+  @UseGuards(MobileDriverGuard)
+  start(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.deliveriesService.startByUser(user.id, +id);
   }
 
   @Patch(':id')

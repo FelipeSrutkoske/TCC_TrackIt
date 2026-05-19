@@ -93,4 +93,28 @@ describe('UsersService', () => {
       );
     });
   });
+
+  describe('resolveDriverProfileId', () => {
+    it('deve retornar o id do perfil de motorista vinculado ao usuario autenticado', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 11,
+        driverProfile: { id: 44 },
+      });
+
+      await expect(service.resolveDriverProfileId(11)).resolves.toBe(44);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 11 },
+        relations: ['driverProfile'],
+      });
+    });
+
+    it('deve retornar null quando o usuario autenticado nao tiver perfil de motorista', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 11,
+        driverProfile: null,
+      });
+
+      await expect(service.resolveDriverProfileId(11)).resolves.toBeNull();
+    });
+  });
 });

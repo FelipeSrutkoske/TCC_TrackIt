@@ -1,0 +1,25 @@
+appId: host.exp.Exponent
+---
+- launchApp
+- assertVisible: "Acesse sua conta"
+- tapOn: "E-mail"
+- inputText: "motorista@test.com"
+- tapOn: "Senha"
+- inputText: "123456"
+- tapOn: "Entrar"
+- assertVisible: "Painel do motorista"
+- tapOn: "Ver entregas atuais"
+- assertVisible: "Entregas atuais"
+- tapOn: "Detalhes"
+- tapOn: "Iniciar entrega"
+- assertVisible: "Finalizar entrega"
+- tapOn: "Finalizar entrega"
+- assertVisible: "Baixa da entrega #"
+- tapOn:
+    id: "receiver-name-input"
+- inputText: "Maria"
+- tapOn:
+    id: "signature-pad"
+- tapOn: "Finalizar entrega"
+- assertVisible: "Historico operacional"
+- assertVisible: "Taxa de conclusao"

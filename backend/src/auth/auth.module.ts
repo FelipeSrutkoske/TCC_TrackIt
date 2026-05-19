@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
+import { getJwtSecret } from './jwt.config';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { UsersModule } from '../users/users.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'trackit_secret',
+        secret: getJwtSecret(configService),
         signOptions: { expiresIn: '8h' },
       }),
     }),

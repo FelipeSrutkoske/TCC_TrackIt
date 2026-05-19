@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToOne,
 } from 'typeorm';
+import type { Driver } from './driver.entity';
 
 export enum TipoUsuario {
   ADMIN = 'ADMIN',
@@ -42,5 +43,5 @@ export class User {
   // Relação lazy para evitar import circular com driver.entity.ts
   // TypeORM resolve isso em runtime via autoLoadEntities
   @OneToOne('Driver', 'user')
-  driverProfile: unknown;
+  driverProfile: Driver | null;
 }

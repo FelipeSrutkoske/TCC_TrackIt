@@ -12,6 +12,9 @@ import { FinalizationsService } from './finalizations.service';
 import { CreateFinalizationDto } from './dto/create-finalization.dto';
 import { UpdateFinalizationDto } from './dto/update-finalization.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MobileDriverGuard } from '../auth/mobile-driver.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @UseGuards(JwtAuthGuard)
 @Controller('finalizations')
@@ -19,8 +22,12 @@ export class FinalizationsController {
   constructor(private readonly finalizationsService: FinalizationsService) {}
 
   @Post()
-  create(@Body() body: CreateFinalizationDto) {
-    return this.finalizationsService.create(body);
+  @UseGuards(MobileDriverGuard)
+  create(
+    @Body() body: CreateFinalizationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.finalizationsService.createForUser(user.id, body);
   }
 
   @Get()
