@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { DeliveryFinalizationScreen } from '../screens/DeliveryFinalizationScreen';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { Delivery } from '../types/delivery';
@@ -117,5 +117,51 @@ describe('DeliveryFinalizationScreen', () => {
     });
 
     expect(replace).toHaveBeenCalledWith('History');
+  });
+
+  it('ignores rapid repeated submit taps while a finalization is already in progress', async () => {
+    let resolveCoordinates!: (value: { latitude: number; longitude: number }) => void;
+
+    mockGetCurrentCoordinates.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveCoordinates = resolve;
+      }),
+    );
+    mockFinalizeDelivery.mockResolvedValueOnce({
+      id: 1,
+      deliveryId: 2,
+      receiverName: 'Maria',
+      signatureUrl: 'signature-data',
+      latitude: -23.5,
+      longitude: -46.6,
+      finalizedAt: '2026-01-01T10:00:00.000Z',
+    });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+
+    const submitButton = screen.getByRole('button', { name: 'Finalizar entrega' });
+
+    act(() => {
+      fireEvent.press(submitButton);
+      fireEvent.press(submitButton);
+    });
+
+    expect(mockGetCurrentCoordinates).toHaveBeenCalledTimes(1);
+
+    resolveCoordinates({ latitude: -23.5, longitude: -46.6 });
+
+    await waitFor(() => {
+      expect(mockFinalizeDelivery).toHaveBeenCalledTimes(1);
+    });
   });
 });

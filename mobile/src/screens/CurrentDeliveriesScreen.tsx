@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { DeliveryCard } from '../components/DeliveryCard';
@@ -23,32 +24,39 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadDeliveries() {
-      if (!session?.accessToken) {
-        setDeliveries([]);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const items = await listCurrentDeliveries(session.accessToken);
-
-        setDeliveries(items);
-        setError(null);
-      } catch (nextError) {
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : 'Nao foi possivel carregar as entregas atuais',
-        );
-      } finally {
-        setIsLoading(false);
-      }
+  async function loadDeliveries() {
+    if (!session?.accessToken) {
+      setDeliveries([]);
+      setIsLoading(false);
+      return;
     }
 
+    try {
+      const items = await listCurrentDeliveries(session.accessToken);
+
+      setDeliveries(items);
+      setError(null);
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Nao foi possivel carregar as entregas atuais',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
     void loadDeliveries();
   }, [session?.accessToken]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsLoading(true);
+      void loadDeliveries();
+    }, [session?.accessToken]),
+  );
 
   return (
     <AppScreen>

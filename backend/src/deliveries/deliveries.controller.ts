@@ -14,7 +14,7 @@ import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../auth/mobile-driver.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @UseGuards(JwtAuthGuard)
 @Controller('deliveries')

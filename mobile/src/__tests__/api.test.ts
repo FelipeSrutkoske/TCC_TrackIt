@@ -16,10 +16,10 @@ describe('resolveApiUrl', () => {
         undefined,
         'http://192.168.0.25:8081/index.bundle?platform=android',
       ),
-    ).toBe('http://192.168.0.25:3000');
+    ).toBe('http://192.168.0.25:3001');
   });
 
   it('falls back to localhost when no host can be inferred', () => {
-    expect(resolveApiUrl(undefined, undefined)).toBe('http://localhost:3000');
+    expect(resolveApiUrl(undefined, undefined)).toBe('http://localhost:3001');
   });
 });

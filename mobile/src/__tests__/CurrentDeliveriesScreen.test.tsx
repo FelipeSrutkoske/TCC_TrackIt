@@ -1,11 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { CurrentDeliveriesScreen } from '../screens/CurrentDeliveriesScreen';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { Delivery } from '../types/delivery';
 
 const mockUseAuth = jest.fn();
 const mockListCurrentDeliveries = jest.fn();
+const mockUseFocusEffect = jest.fn();
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (...args: unknown[]) => mockUseFocusEffect(...args),
+}));
 
 jest.mock('../contexts/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -36,6 +41,8 @@ describe('CurrentDeliveriesScreen', () => {
       session: { accessToken: 'token-1', user: { id: 7, nome: 'Motorista', email: 'm@test.com', tipoUsuario: 'MOTORISTA' } },
     });
     mockListCurrentDeliveries.mockReset();
+    mockUseFocusEffect.mockReset();
+    mockUseFocusEffect.mockImplementation(() => undefined);
   });
 
   it('loads and renders the authenticated driver current deliveries', async () => {
@@ -72,5 +79,34 @@ describe('CurrentDeliveriesScreen', () => {
     expect(
       screen.getByText('Quando novas atribuicoes estiverem disponiveis, elas aparecerao aqui.'),
     ).toBeOnTheScreen();
+  });
+
+  it('refreshes deliveries when the screen regains focus', async () => {
+    let focusCallback: (() => void) | undefined;
+
+    mockUseFocusEffect.mockImplementation((callback: () => void) => {
+      focusCallback = callback;
+    });
+    mockListCurrentDeliveries
+      .mockResolvedValueOnce(deliveriesFixture)
+      .mockResolvedValueOnce([deliveriesFixture[0]]);
+
+    render(
+      <AppThemeProvider>
+        <CurrentDeliveriesScreen />
+      </AppThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockListCurrentDeliveries).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      focusCallback?.();
+    });
+
+    await waitFor(() => {
+      expect(mockListCurrentDeliveries).toHaveBeenCalledTimes(2);
+    });
   });
 });

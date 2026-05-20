@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
 
-const DEFAULT_API_URL = 'http://localhost:3000';
+const DEFAULT_API_URL = 'http://localhost:3001';
 
 export function resolveApiUrl(explicitApiUrl?: string, bundleUrl?: string) {
   if (explicitApiUrl) {
@@ -11,7 +11,7 @@ export function resolveApiUrl(explicitApiUrl?: string, bundleUrl?: string) {
     try {
       const url = new URL(bundleUrl);
 
-      return `${url.protocol}//${url.hostname}:3000`;
+      return `${url.protocol}//${url.hostname}:3001`;
     } catch {
       return DEFAULT_API_URL;
     }

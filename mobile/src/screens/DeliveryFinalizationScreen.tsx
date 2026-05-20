@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,9 +32,10 @@ export function DeliveryFinalizationScreen({
   const [signature, setSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   async function handleSubmit() {
-    if (!session?.accessToken) {
+    if (!session?.accessToken || isSubmittingRef.current) {
       return;
     }
 
@@ -50,6 +51,7 @@ export function DeliveryFinalizationScreen({
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -78,6 +80,7 @@ export function DeliveryFinalizationScreen({
         nextError instanceof Error ? nextError.message : 'Nao foi possivel finalizar a entrega',
       );
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   }

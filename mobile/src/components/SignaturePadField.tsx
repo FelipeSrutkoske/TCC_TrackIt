@@ -24,18 +24,19 @@ export function SignaturePadField({ label, value, onChange }: SignaturePadFieldP
   const [points, setPoints] = useState<SignaturePoint[]>([]);
   const [bounds, setBounds] = useState(DEFAULT_BOUNDS);
 
-  function updateSignature(nextPoints: SignaturePoint[]) {
-    setPoints(nextPoints);
-    onChange(createSignaturePayload(nextPoints, bounds));
-  }
-
   function addPointFromEvent(event?: GestureResponderEvent) {
     const point = {
       x: event?.nativeEvent.locationX ?? bounds.width / 2,
       y: event?.nativeEvent.locationY ?? bounds.height / 2,
     };
 
-    updateSignature([...points, point]);
+    setPoints((currentPoints) => {
+      const nextPoints = [...currentPoints, point];
+
+      onChange(createSignaturePayload(nextPoints, bounds));
+
+      return nextPoints;
+    });
   }
 
   function handleLayout(event: LayoutChangeEvent) {
