@@ -16,6 +16,19 @@ import { Delivery } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
 import { openDeliveryAddressInMaps } from '../utils/maps';
 
+function getDeliveryPhase(status: Delivery['status']) {
+  switch (status) {
+    case 'AGUARDANDO_MOTORISTA':
+      return 'Aguardando despacho';
+    case 'EM_ROTA':
+      return 'Em deslocamento';
+    case 'ENTREGUE':
+      return 'Entrega concluida';
+    case 'CANCELADO':
+      return 'Ocorrencia encerrada';
+  }
+}
+
 type DeliveryDetailsScreenProps = {
   route: RouteProp<RootStackParamList, 'DeliveryDetails'>;
   navigation?: NativeStackNavigationProp<RootStackParamList, 'DeliveryDetails'>;
@@ -53,10 +66,12 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
   return (
     <AppScreen>
       <ScrollView contentContainerStyle={styles.container}>
-        <AppHeader
-          title={`Entrega #${delivery.id}`}
-          subtitle="Confira os dados operacionais antes de iniciar o deslocamento."
-        />
+        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
+          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Missao operacional</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entrega #{delivery.id}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Confira os dados operacionais antes de iniciar o deslocamento.</Text>
+          <Text style={[styles.phaseLabel, { color: theme.colors.accentText }]}>{getDeliveryPhase(delivery.status)}</Text>
+        </View>
 
         <AppCard>
           <StatusBadge status={delivery.status} />
@@ -103,15 +118,39 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-    gap: 24,
+    padding: 18,
+    gap: 18,
+  },
+  hero: {
+    borderRadius: 30,
+    gap: 12,
+    padding: 20,
+  },
+  heroEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  phaseLabel: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   error: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
   },
 });

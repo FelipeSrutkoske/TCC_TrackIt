@@ -48,6 +48,9 @@ describe('DeliveryDetailsScreen', () => {
       </AppThemeProvider>,
     );
 
+    expect(screen.getByText('Missao operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Aguardando despacho')).toBeOnTheScreen();
+
     fireEvent.press(screen.getByRole('button', { name: 'Iniciar entrega' }));
 
     await waitFor(() => {

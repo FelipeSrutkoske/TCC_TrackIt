@@ -20,9 +20,43 @@ jest.mock('../services/finalizations.service', () => ({
   finalizeDelivery: (...args: unknown[]) => mockFinalizeDelivery(...args),
 }));
 
+jest.mock('../components/SignaturePadField', () => ({
+  SignaturePadField: ({
+    onChange,
+    onDrawEnd,
+    onDrawStart,
+  }: {
+    onChange: (value: string | null) => void;
+    onDrawStart?: () => void;
+    onDrawEnd?: () => void;
+  }) => {
+    const ReactNative = require('react-native');
+
+    return (
+      <ReactNative.Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Assinar entrega"
+        testID="signature-pad"
+        onPress={() => onChange('sig:test')}
+        onTouchEnd={onDrawEnd}
+        onTouchStart={onDrawStart}
+      >
+        <ReactNative.Text>Mock signature pad</ReactNative.Text>
+      </ReactNative.Pressable>
+    );
+  },
+}));
+
 const deliveryFixture: Delivery = {
   id: 2,
   driverId: 701,
+  companyId: 9,
+  company: {
+    id: 9,
+    corporateName: 'ACME Transportes LTDA',
+    tradeName: 'ACME',
+  },
+  createdAt: '2026-05-24T10:00:00.000Z',
   destinationAddress: 'Rua B, 200 - Centro',
   status: 'EM_ROTA',
 };
@@ -49,12 +83,42 @@ describe('DeliveryFinalizationScreen', () => {
       </AppThemeProvider>,
     );
 
+    expect(screen.getByText('Encerramento operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Fechar entrega com validacao completa')).toBeOnTheScreen();
+    expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
+
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
 
     expect(await screen.findByText('Registre a assinatura antes de concluir a entrega.')).toBeOnTheScreen();
     expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
     expect(mockFinalizeDelivery).not.toHaveBeenCalled();
+  });
+
+  it('disables parent scroll while the user is drawing the signature', () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    const scrollView = screen.getByTestId('delivery-finalization-scroll');
+    const signaturePad = screen.getByTestId('signature-pad');
+
+    expect(scrollView.props.scrollEnabled).toBe(true);
+
+    fireEvent(signaturePad, 'touchStart', { nativeEvent: { locationX: 14, locationY: 18 } });
+
+    expect(screen.getByTestId('delivery-finalization-scroll').props.scrollEnabled).toBe(false);
+
+    fireEvent(signaturePad, 'touchEnd');
+
+    expect(screen.getByTestId('delivery-finalization-scroll').props.scrollEnabled).toBe(true);
   });
 
   it('shows an operational error when GPS is unavailable', async () => {
@@ -70,7 +134,10 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
     fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
 
     expect(await screen.findByText('Nao foi possivel confirmar a localizacao atual.')).toBeOnTheScreen();
@@ -100,7 +167,10 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
     fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
 
     await waitFor(() => {
@@ -108,6 +178,8 @@ describe('DeliveryFinalizationScreen', () => {
         expect.objectContaining({
           deliveryId: 2,
           receiverName: 'Maria',
+          receiverDocument: '12345678901',
+          receiverRelation: 'Irmao',
           latitude: -23.5,
           longitude: -46.6,
           signature: expect.any(String),
@@ -147,7 +219,9 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
 
     const submitButton = screen.getByRole('button', { name: 'Finalizar entrega' });
 

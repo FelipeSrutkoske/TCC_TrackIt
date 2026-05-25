@@ -86,7 +86,10 @@ describe('FinalizationsService', () => {
     expect(mockRepository.create).toHaveBeenCalledWith({
       deliveryId: 1,
       receiverName: 'João',
+      receiverDocument: '',
+      receiverRelation: '',
       signatureUrl: 'assinatura-base64',
+      photoUrl: '',
       latitude: -23.5,
       longitude: -46.6,
     });
@@ -99,6 +102,38 @@ describe('FinalizationsService', () => {
       }),
     );
     expect(result.receiverName).toBe('João');
+  });
+
+  it('preenche campos opcionais com valores seguros quando o mobile nao envia', async () => {
+    mockDataSource.transaction.mockImplementation(async (callback: any) =>
+      callback({
+        getRepository: jest.fn().mockReturnValue({
+          create: mockRepository.create,
+          save: mockRepository.save,
+        }),
+      }),
+    );
+    mockDeliveriesService.findOwnedByUser.mockResolvedValue({
+      id: 1,
+      driverId: 14,
+      status: StatusEntrega.EM_ROTA,
+    });
+
+    await service.createForUser(77, {
+      deliveryId: 1,
+      receiverName: 'João',
+      signature: 'assinatura-base64',
+      latitude: -23.5,
+      longitude: -46.6,
+    } as any);
+
+    expect(mockRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        receiverDocument: '',
+        receiverRelation: '',
+        photoUrl: '',
+      }),
+    );
   });
 
   it('deve executar finalização e atualização de status dentro de transação', async () => {

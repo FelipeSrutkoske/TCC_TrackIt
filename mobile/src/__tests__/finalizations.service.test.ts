@@ -16,6 +16,8 @@ describe('finalizations.service', () => {
     const payload = {
       deliveryId: 2,
       receiverName: 'Maria',
+      receiverDocument: '12345678901',
+      receiverRelation: 'Irmao',
       signature: 'signature-data',
       latitude: -23.5,
       longitude: -46.6,

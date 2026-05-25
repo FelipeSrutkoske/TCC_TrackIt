@@ -1,15 +1,16 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AppThemeProvider, useAppTheme } from './src/theme/AppThemeProvider';
 
 function Root() {
-  const { colorScheme } = useAppTheme();
+  const { resolvedColorScheme } = useAppTheme();
 
   return (
     <>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={resolvedColorScheme === 'dark' ? 'light' : 'dark'} />
       <AppNavigator />
     </>
   );
@@ -17,10 +18,12 @@ function Root() {
 
 export default function App() {
   return (
-    <AppThemeProvider>
-      <AuthProvider>
-        <Root />
-      </AuthProvider>
-    </AppThemeProvider>
+    <SafeAreaProvider>
+      <AppThemeProvider>
+        <AuthProvider>
+          <Root />
+        </AuthProvider>
+      </AppThemeProvider>
+    </SafeAreaProvider>
   );
 }

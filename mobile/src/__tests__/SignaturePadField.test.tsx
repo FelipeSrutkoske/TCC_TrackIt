@@ -68,4 +68,18 @@ describe('SignaturePadField', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('captures the responder during drawing so the parent scroll does not steal the gesture', () => {
+    render(
+      <AppThemeProvider>
+        <SignaturePadField label="Assinatura" onChange={jest.fn()} value={null} />
+      </AppThemeProvider>,
+    );
+
+    const pad = screen.getByTestId('signature-pad');
+
+    expect(pad.props.onStartShouldSetResponder()).toBe(true);
+    expect(pad.props.onMoveShouldSetResponder()).toBe(true);
+    expect(pad.props.onResponderTerminationRequest()).toBe(false);
+  });
 });

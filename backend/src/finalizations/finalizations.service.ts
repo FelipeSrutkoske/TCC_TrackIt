@@ -23,7 +23,7 @@ export class FinalizationsService {
 
   create(data: CreateFinalizationDto): Promise<Finalization> {
     const finalization = this.finalizationsRepository.create(
-      this.mapToPersistence(data),
+      this.mapToPersistence(data, true),
     );
     return this.finalizationsRepository.save(finalization);
   }
@@ -46,7 +46,7 @@ export class FinalizationsService {
     return this.dataSource.transaction(async (entityManager) => {
       const finalizationRepository = entityManager.getRepository(Finalization);
       const finalization = await finalizationRepository.save(
-        finalizationRepository.create(this.mapToPersistence(data)),
+        finalizationRepository.create(this.mapToPersistence(data, true)),
       );
 
       await this.deliveriesService.updateStatus(
@@ -89,11 +89,19 @@ export class FinalizationsService {
 
   private mapToPersistence(
     data: Partial<CreateFinalizationDto>,
+    includeMobileDefaults = false,
   ): Partial<Finalization> {
     const { signature, ...finalizationData } = data;
 
     return {
       ...finalizationData,
+      ...(includeMobileDefaults
+        ? {
+            receiverDocument: finalizationData.receiverDocument ?? '',
+            receiverRelation: finalizationData.receiverRelation ?? '',
+            photoUrl: finalizationData.photoUrl ?? '',
+          }
+        : {}),
       ...(signature !== undefined ? { signatureUrl: signature } : {}),
     } as Partial<Finalization>;
   }

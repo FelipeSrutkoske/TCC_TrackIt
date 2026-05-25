@@ -29,7 +29,15 @@ describe('HistoryScreen', () => {
     mockGetDeliveryHistory.mockResolvedValueOnce({
       items: [
         { id: 4, driverId: 701, destinationAddress: 'Rua D', status: 'CANCELADO' },
-        { id: 3, driverId: 701, destinationAddress: 'Rua C', status: 'ENTREGUE' },
+        {
+          id: 3,
+          driverId: 701,
+          company: { id: 9, corporateName: 'ACME Transportes LTDA' },
+          createdAt: '2026-05-24T10:00:00.000Z',
+          finalization: { finalizedAt: '2026-05-24T12:30:00.000Z' },
+          destinationAddress: 'Rua C',
+          status: 'ENTREGUE',
+        },
       ],
       metrics: {
         totalConcluidas: 1,
@@ -49,11 +57,18 @@ describe('HistoryScreen', () => {
       expect(mockGetDeliveryHistory).toHaveBeenCalledWith('token-1');
     });
 
+    expect(await screen.findByText('Leitura consolidada')).toBeOnTheScreen();
+    expect(screen.getByTestId('history-scroll')).toBeOnTheScreen();
+    expect(screen.getByText('Historico operacional')).toHaveStyle({ color: '#F7FFF9' });
+    expect(screen.getByText('Resumo das entregas')).toBeOnTheScreen();
     expect(await screen.findByText('25%')).toBeOnTheScreen();
-    expect(screen.getByText('Concluidas')).toBeOnTheScreen();
-    expect(screen.getByText('Em rota')).toBeOnTheScreen();
-    expect(screen.getByText('Canceladas')).toBeOnTheScreen();
+    expect(screen.getByText('Concluidas')).toHaveStyle({ fontSize: 12 });
+    expect(screen.getByText('Em rota')).toHaveStyle({ fontSize: 12 });
+    expect(screen.getByText('Canceladas')).toHaveStyle({ fontSize: 12 });
     expect(screen.getByText('Rua D')).toBeOnTheScreen();
+    expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
+    expect(screen.getAllByText('Tempo de entrega').length).toBeGreaterThan(0);
+    expect(screen.getByText('2h 30min')).toBeOnTheScreen();
     expect(screen.getByText('Rua C')).toBeOnTheScreen();
   });
 });

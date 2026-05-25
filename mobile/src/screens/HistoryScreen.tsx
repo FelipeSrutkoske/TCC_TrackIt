@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AppCard } from '../components/AppCard';
 import { EmptyState } from '../components/EmptyState';
-import { AppHeader } from '../components/AppHeader';
-import { InfoRow } from '../components/InfoRow';
 import { LoadingState } from '../components/LoadingState';
-import { MetricCard } from '../components/MetricCard';
 import { AppScreen } from '../components/AppScreen';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,20 +53,42 @@ export function HistoryScreen() {
 
   return (
     <AppScreen>
-      <View style={styles.container}>
-        <AppHeader
-          title="Historico operacional"
-          subtitle="Consulte os encerramentos recentes e os indicadores consolidados do seu fluxo de entregas."
-        />
+      <ScrollView contentContainerStyle={styles.container} testID="history-scroll">
+        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
+          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Leitura consolidada</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Historico operacional</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Indicadores recentes e entregas encerradas em um painel rapido para consulta em rota.</Text>
+        </View>
 
         {isLoading ? <LoadingState message="Carregando historico..." /> : null}
 
         {!isLoading && !error ? (
-          <View style={styles.metricsGrid}>
-            <MetricCard label="Concluidas" value={String(metrics.totalConcluidas)} />
-            <MetricCard label="Em rota" value={String(metrics.totalEmRota)} />
-            <MetricCard label="Canceladas" value={String(metrics.totalCanceladas)} />
-            <MetricCard label="Taxa de conclusao" value={`${metrics.taxaConclusao}%`} />
+          <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+            <View style={styles.summaryHeader}>
+              <View>
+                <Text style={[styles.sectionEyebrow, { color: theme.colors.textMuted }]}>Resumo das entregas</Text>
+                <Text style={[styles.summaryTitle, { color: theme.colors.text }]}>Performance operacional</Text>
+              </View>
+              <View style={[styles.ratePill, { backgroundColor: theme.colors.highlight }]}> 
+                <Text style={[styles.rateValue, { color: theme.colors.text }]}>{metrics.taxaConclusao}%</Text>
+                <Text style={[styles.rateLabel, { color: theme.colors.text }]}>conclusao</Text>
+              </View>
+            </View>
+
+            <View style={styles.metricsGrid}>
+              <View style={[styles.metricChip, { backgroundColor: theme.colors.surfaceMuted }]}> 
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>{metrics.totalConcluidas}</Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>Concluidas</Text>
+              </View>
+              <View style={[styles.metricChip, { backgroundColor: theme.colors.surfaceMuted }]}> 
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>{metrics.totalEmRota}</Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>Em rota</Text>
+              </View>
+              <View style={[styles.metricChip, { backgroundColor: theme.colors.surfaceMuted }]}> 
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>{metrics.totalCanceladas}</Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>Canceladas</Text>
+              </View>
+            </View>
           </View>
         ) : null}
 
@@ -86,36 +104,220 @@ export function HistoryScreen() {
         ) : null}
 
         {!isLoading && !error && items.length > 0 ? (
-          <ScrollView contentContainerStyle={styles.list}>
+          <View style={styles.list}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Entregas recentes</Text>
             {items.map((delivery) => (
-              <AppCard key={delivery.id}>
-                <Text style={[styles.code, { color: theme.colors.text }]}>Entrega #{delivery.id}</Text>
-                <StatusBadge status={delivery.status} />
-                <InfoRow label="Destino" value={delivery.destinationAddress} />
-              </AppCard>
+              <View
+                key={delivery.id}
+                style={[styles.deliveryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              >
+                <View style={styles.deliveryHeader}>
+                  <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? `Entrega #${delivery.id}`}</Text>
+                  <StatusBadge status={delivery.status} />
+                </View>
+                <View style={styles.timeGrid}>
+                  <View style={styles.timeBlock}>
+                    <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Criada em</Text>
+                    <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.createdAt)}</Text>
+                  </View>
+                  <View style={styles.timeBlock}>
+                    <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Finalizada em</Text>
+                    <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.finalization?.finalizedAt)}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Tempo de entrega</Text>
+                <Text style={[styles.duration, { color: theme.colors.text }]}>{formatDuration(delivery.createdAt, delivery.finalization?.finalizedAt)}</Text>
+                <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Destino</Text>
+                <Text style={[styles.destination, { color: theme.colors.text }]}>{delivery.destinationAddress}</Text>
+              </View>
             ))}
-          </ScrollView>
+          </View>
         ) : null}
-      </View>
+      </ScrollView>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 24,
-    gap: 24,
+    padding: 18,
+    gap: 18,
+    paddingBottom: 34,
   },
-  metricsGrid: {
+  hero: {
+    borderRadius: 26,
+    gap: 8,
+    padding: 18,
+  },
+  heroEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.7,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  summaryCard: {
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 16,
     gap: 16,
   },
-  list: {
-    gap: 16,
-    paddingBottom: 24,
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  code: {
-    fontSize: 20,
+  sectionEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
+  },
+  summaryTitle: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  ratePill: {
+    minWidth: 86,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  rateValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+  },
+  rateLabel: {
+    fontSize: 11,
     fontWeight: '700',
   },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  metricChip: {
+    flexGrow: 1,
+    minWidth: 92,
+    borderRadius: 18,
+    padding: 12,
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  metricLabel: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  list: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  deliveryCard: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 16,
+    gap: 10,
+  },
+  deliveryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  code: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  timeGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  timeBlock: {
+    flexGrow: 1,
+    minWidth: 130,
+    gap: 4,
+  },
+  destinationLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  destination: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 21,
+  },
+  duration: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
 });
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return 'Nao informado';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Nao informado';
+  }
+
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatDuration(startValue?: string | null, endValue?: string | null) {
+  if (!startValue || !endValue) {
+    return 'Nao informado';
+  }
+
+  const start = new Date(startValue).getTime();
+  const end = new Date(endValue).getTime();
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+    return 'Nao informado';
+  }
+
+  const totalMinutes = Math.round((end - start) / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes}min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${minutes}min`;
+}

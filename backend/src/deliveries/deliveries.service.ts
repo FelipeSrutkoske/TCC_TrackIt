@@ -42,7 +42,7 @@ export class DeliveriesService {
 
   findAll(): Promise<Delivery[]> {
     return this.deliveriesRepository.find({
-      relations: ['driver', 'driver.user', 'occurrences'],
+      relations: ['company', 'driver', 'driver.user', 'occurrences'],
       order: { id: 'DESC' },
     });
   }
@@ -61,7 +61,7 @@ export class DeliveriesService {
           status: StatusEntrega.EM_ROTA,
         },
       ],
-      relations: ['occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization'],
       order: { id: 'DESC' },
     });
   }
@@ -81,7 +81,7 @@ export class DeliveriesService {
           status: StatusEntrega.CANCELADO,
         },
       ],
-      relations: ['occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization'],
       order: { id: 'DESC' },
     });
 
@@ -128,7 +128,7 @@ export class DeliveriesService {
   async findOne(id: number): Promise<Delivery> {
     const delivery = await this.deliveriesRepository.findOne({
       where: { id },
-      relations: ['driver', 'driver.user', 'occurrences', 'finalization'],
+      relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization'],
     });
     if (!delivery) throw new NotFoundException(`Entrega #${id} não encontrada`);
     return delivery;
@@ -138,7 +138,7 @@ export class DeliveriesService {
     const driverId = await this.getRequiredDriverProfileId(userId);
     const delivery = await this.deliveriesRepository.findOne({
       where: { id: deliveryId, driverId },
-      relations: ['occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization'],
     });
 
     if (!delivery) {

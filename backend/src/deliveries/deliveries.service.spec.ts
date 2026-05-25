@@ -140,7 +140,7 @@ describe('DeliveriesService', () => {
             status: StatusEntrega.EM_ROTA,
           },
         ],
-        relations: ['occurrences', 'finalization'],
+        relations: ['company', 'occurrences', 'finalization'],
         order: { id: 'DESC' },
       });
       expect(result).toEqual(activeDeliveries);
@@ -186,7 +186,7 @@ describe('DeliveriesService', () => {
             status: StatusEntrega.CANCELADO,
           },
         ],
-        relations: ['occurrences', 'finalization'],
+        relations: ['company', 'occurrences', 'finalization'],
         order: { id: 'DESC' },
       });
       expect(result).toEqual({

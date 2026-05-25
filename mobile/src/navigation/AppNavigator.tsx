@@ -9,6 +9,7 @@ import { DeliveryFinalizationScreen } from '../screens/DeliveryFinalizationScree
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { RootStackParamList } from './types';
 import { useAppTheme } from '../theme/AppThemeProvider';
 
@@ -55,6 +56,7 @@ export function AppNavigator() {
             <Stack.Screen component={DeliveryDetailsScreen} name="DeliveryDetails" />
             <Stack.Screen component={DeliveryFinalizationScreen} name="DeliveryFinalization" />
             <Stack.Screen component={HistoryScreen} name="History" />
+            <Stack.Screen component={SettingsScreen} name="Settings" />
           </>
         ) : (
           <Stack.Screen component={LoginScreen} name="Login" />

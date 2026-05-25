@@ -10,6 +10,7 @@ import {
 import { Driver } from '../../users/entities/driver.entity';
 import { Occurrence } from '../../occurrences/entities/occurrence.entity';
 import { Finalization } from '../../finalizations/entities/finalization.entity';
+import { Company } from './company.entity';
 
 export enum StatusEntrega {
   AGUARDANDO_MOTORISTA = 'AGUARDANDO_MOTORISTA',
@@ -26,15 +27,25 @@ export class Delivery {
   @Column({ name: 'motorista_id', nullable: true })
   driverId: number;
 
+  @Column({ name: 'empresa_id', nullable: true })
+  companyId: number;
+
   @ManyToOne(() => Driver, (driver) => driver.deliveries)
   @JoinColumn({ name: 'motorista_id' })
   driver: Driver;
+
+  @ManyToOne(() => Company, (company) => company.deliveries)
+  @JoinColumn({ name: 'empresa_id' })
+  company: Company;
 
   @Column({ name: 'endereco_destino', length: 255 })
   destinationAddress: string;
 
   @Column({ name: 'previsao_entrega', type: 'datetime', nullable: true })
   deliveryEstimate: Date;
+
+  @Column({ name: 'data_criacao', type: 'timestamp' })
+  createdAt: Date;
 
   @Column({
     type: 'enum',

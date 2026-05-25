@@ -14,13 +14,16 @@ export function PrimaryButton({ title, onPress, disabled }: PrimaryButtonProps) 
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.button,
-        { backgroundColor: disabled ? theme.colors.surfaceMuted : theme.colors.primary },
-      ]}
-    >
+        disabled={disabled}
+        onPress={onPress}
+        style={[
+          styles.button,
+          {
+            backgroundColor: disabled ? theme.colors.surfaceMuted : theme.colors.primary,
+            borderColor: disabled ? theme.colors.border : theme.colors.primary,
+          },
+        ]}
+      >
       <Text style={[styles.text, { color: theme.colors.primaryText }]}>{title}</Text>
     </Pressable>
   );
@@ -28,14 +31,16 @@ export function PrimaryButton({ title, onPress, disabled }: PrimaryButtonProps) 
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 56,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
   },
   text: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });

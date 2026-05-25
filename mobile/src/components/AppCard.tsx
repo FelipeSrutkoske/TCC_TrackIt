@@ -12,6 +12,7 @@ export function AppCard({ children }: { children: ReactNode }) {
         {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
+          shadowColor: theme.colors.surfaceAccent,
         },
       ]}
     >
@@ -23,8 +24,15 @@ export function AppCard({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
+    borderRadius: 26,
+    padding: 22,
+    gap: 18,
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 2,
   },
 });

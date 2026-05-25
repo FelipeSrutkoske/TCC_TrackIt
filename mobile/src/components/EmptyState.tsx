@@ -14,6 +14,7 @@ export function EmptyState({ title, description }: EmptyStateProps) {
   return (
     <AppCard>
       <View style={styles.container}>
+        <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>Operacao</Text>
         <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
         <Text style={[styles.description, { color: theme.colors.textMuted }]}>{description}</Text>
       </View>
@@ -23,11 +24,17 @@ export function EmptyState({ title, description }: EmptyStateProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
+    gap: 10,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
   },
   description: {
     fontSize: 15,

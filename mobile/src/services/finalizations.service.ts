@@ -3,6 +3,8 @@ import { apiRequest } from '../lib/api';
 export type DeliveryFinalizationPayload = {
   deliveryId: number;
   receiverName: string;
+  receiverDocument?: string;
+  receiverRelation?: string;
   signature: string;
   latitude: number;
   longitude: number;

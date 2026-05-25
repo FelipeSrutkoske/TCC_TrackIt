@@ -14,14 +14,14 @@ export function SecondaryButton({ title, onPress }: SecondaryButtonProps) {
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[
-        styles.button,
-        {
-          backgroundColor: theme.colors.secondary,
-          borderColor: theme.colors.border,
-        },
-      ]}
-    >
+        style={[
+          styles.button,
+          {
+            backgroundColor: theme.colors.secondary,
+            borderColor: theme.colors.borderStrong,
+          },
+        ]}
+      >
       <Text style={[styles.text, { color: theme.colors.secondaryText }]}>{title}</Text>
     </Pressable>
   );
@@ -29,15 +29,15 @@ export function SecondaryButton({ title, onPress }: SecondaryButtonProps) {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 54,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
   },
   text: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

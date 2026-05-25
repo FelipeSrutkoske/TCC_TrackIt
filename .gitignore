@@ -24,12 +24,17 @@ Dev.MD
 
 # production
 /build
+**/dist/
 
 # misc
 .DS_Store
 .vscode/
 .idea/
 *.pem
+*.key
+*.crt
+*.p12
+*.pfx
 *.bak
 
 # debug
@@ -56,11 +61,16 @@ AGENTS.md
 AGENTS.MD
 CLAUDE.md
 CLAUDE.MD
+DESIGN.md
+docs/superpowers/
+**/docs/superpowers/
 image.png
 
 # local env info
 env/
 .env/
+secrets/
+*.secret
 
 # vercel
 .vercel
@@ -70,6 +80,8 @@ env/
 next-env.d.ts
 
 mobile/REQUIREMENTS.md
+mobile/.expo/
+mobile/dist/
 
 # backend
 backend/.env

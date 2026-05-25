@@ -43,6 +43,6 @@ describe('AppNavigator', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Painel do motorista')).toBeOnTheScreen();
+    expect(screen.getAllByText('Painel do motorista').length).toBeGreaterThan(0);
   });
 });

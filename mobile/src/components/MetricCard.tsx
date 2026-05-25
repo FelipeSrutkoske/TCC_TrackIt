@@ -23,16 +23,17 @@ export function MetricCard({ label, value }: MetricCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
+    gap: 10,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.6,
+    fontWeight: '700',
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   value: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.8,
   },
 });

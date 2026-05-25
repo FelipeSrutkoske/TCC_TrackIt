@@ -20,16 +20,18 @@ export function InfoRow({ label, value }: InfoRowProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 4,
+    gap: 6,
+    paddingBottom: 14,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.6,
+    fontWeight: '700',
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   value: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 24,
   },
 });

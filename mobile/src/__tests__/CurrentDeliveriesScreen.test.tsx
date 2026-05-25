@@ -60,9 +60,14 @@ describe('CurrentDeliveriesScreen', () => {
       expect(mockListCurrentDeliveries).toHaveBeenCalledWith('token-1');
     });
 
+    expect(await screen.findByText('Operacao ativa')).toBeOnTheScreen();
+    expect(screen.getByText('2')).toBeOnTheScreen();
+    expect(screen.getByText('Ativas')).toBeOnTheScreen();
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Em rota').length).toBeGreaterThan(0);
+    expect(screen.getByText('Aguardando')).toBeOnTheScreen();
     expect(await screen.findByText('Rua B, 200 - Centro')).toBeOnTheScreen();
     expect(screen.getByText('Rua A, 100 - Centro')).toBeOnTheScreen();
-    expect(screen.getByText('Em rota')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando motorista')).toBeOnTheScreen();
   });
 

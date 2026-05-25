@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import {
   GestureResponderEvent,
   LayoutChangeEvent,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -16,6 +15,8 @@ type SignaturePadFieldProps = {
   label: string;
   value: string | null;
   onChange: (value: string | null) => void;
+  onDrawStart?: () => void;
+  onDrawEnd?: () => void;
 };
 
 const DEFAULT_BOUNDS = { width: 280, height: 160 };
@@ -39,7 +40,13 @@ function buildPathData(points: SignaturePoint[]) {
   return segments.join(' ');
 }
 
-export function SignaturePadField({ label, value, onChange }: SignaturePadFieldProps) {
+export function SignaturePadField({
+  label,
+  value,
+  onChange,
+  onDrawStart,
+  onDrawEnd,
+}: SignaturePadFieldProps) {
   const { theme } = useAppTheme();
   const [strokes, setStrokes] = useState<SignaturePoint[][]>([]);
   const [bounds, setBounds] = useState(DEFAULT_BOUNDS);
@@ -173,6 +180,7 @@ export function SignaturePadField({ label, value, onChange }: SignaturePadFieldP
 
     isDrawingRef.current = false;
     lastPointRef.current = null;
+    onDrawEnd?.();
     onChange(createSignaturePayload(allPointsRef.current, bounds));
   }
 
@@ -182,12 +190,16 @@ export function SignaturePadField({ label, value, onChange }: SignaturePadFieldP
     <View style={styles.container}>
       <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>
 
-      <Pressable
+      <View
         accessibilityLabel="Assinar entrega"
         accessibilityRole="button"
         onLayout={handleLayout}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+        onStartShouldSetResponder={() => true}
         onTouchStart={(event) => {
           isDrawingRef.current = true;
+          onDrawStart?.();
           lastPointRef.current = null;
           commitStrokes([...strokesRef.current, []]);
           addPointFromEvent(event, false);
@@ -235,7 +247,7 @@ export function SignaturePadField({ label, value, onChange }: SignaturePadFieldP
             );
           })}
         </Svg>
-      </Pressable>
+      </View>
 
       {value ? (
         <PrimaryButton
