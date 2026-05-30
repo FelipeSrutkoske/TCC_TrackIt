@@ -11,6 +11,7 @@ import { Driver } from '../../users/entities/driver.entity';
 import { Occurrence } from '../../occurrences/entities/occurrence.entity';
 import { Finalization } from '../../finalizations/entities/finalization.entity';
 import { Company } from './company.entity';
+import { DeliveryDetail } from './delivery-detail.entity';
 
 export enum StatusEntrega {
   AGUARDANDO_MOTORISTA = 'AGUARDANDO_MOTORISTA',
@@ -48,6 +49,27 @@ export class Delivery {
   createdAt: Date;
 
   @Column({
+    name: 'latitude_inicio',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
+  latitudeInicio: number | null;
+
+  @Column({
+    name: 'longitude_inicio',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
+  longitudeInicio: number | null;
+
+  @Column({ name: 'data_hora_inicio', type: 'datetime', nullable: true })
+  dataHoraInicio: Date | null;
+
+  @Column({
     type: 'enum',
     enum: StatusEntrega,
     default: StatusEntrega.AGUARDANDO_MOTORISTA,
@@ -56,6 +78,9 @@ export class Delivery {
 
   @OneToMany(() => Occurrence, (occurrence) => occurrence.delivery)
   occurrences: Occurrence[];
+
+  @OneToMany(() => DeliveryDetail, (detail) => detail.delivery)
+  details: DeliveryDetail[];
 
   @OneToOne(() => Finalization, (finalization) => finalization.delivery)
   finalization: Finalization;

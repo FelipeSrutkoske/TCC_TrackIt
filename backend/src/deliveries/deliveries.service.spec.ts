@@ -1,14 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DeliveriesService } from './deliveries.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { Delivery, StatusEntrega } from './entities/delivery.entity';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { DeliveryDetail } from './entities/delivery-detail.entity';
 
 describe('DeliveriesService', () => {
   let service: DeliveriesService;
   let mockRepository: any;
+  let mockDeliveryDetailRepository: any;
   let mockUsersService: any;
+  let mockDataSource: any;
 
   beforeEach(async () => {
     mockRepository = {
@@ -22,8 +30,25 @@ describe('DeliveriesService', () => {
       count: jest.fn(),
     };
 
+    mockDeliveryDetailRepository = {
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn().mockImplementation((data) => Promise.resolve(data)),
+    };
+
     mockUsersService = {
       resolveDriverProfileId: jest.fn(),
+    };
+
+    mockDataSource = {
+      transaction: jest.fn(async (callback) =>
+        callback({
+          getRepository: (entity: unknown) => {
+            if (entity === Delivery) return mockRepository;
+            if (entity === DeliveryDetail) return mockDeliveryDetailRepository;
+            throw new Error('Repositorio nao mockado');
+          },
+        }),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,8 +59,16 @@ describe('DeliveriesService', () => {
           useValue: mockRepository,
         },
         {
+          provide: getRepositoryToken(DeliveryDetail),
+          useValue: mockDeliveryDetailRepository,
+        },
+        {
           provide: UsersService,
           useValue: mockUsersService,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -48,16 +81,72 @@ describe('DeliveriesService', () => {
   });
 
   describe('create', () => {
-    it('deve salvar a entrega e resolver o driverId caso motoristaId seja enviado', async () => {
-      const dto = { destinationAddress: 'Rua A', motoristaId: 4 };
+    it('deve salvar a entrega e seus detalhes em transacao e resolver o driverId caso motoristaId seja enviado', async () => {
+      const dto = {
+        destinationAddress: 'Rua A',
+        motoristaId: 4,
+        detalhesEntrega: [
+          {
+            descricao: 'Caixa de documentos',
+            categoria: 'Documentos',
+            pesoKg: 1.25,
+            volumeM3: 0.015,
+            quantidade: 1,
+            valorDeclarado: 250,
+          },
+        ],
+      };
+      mockRepository.save.mockResolvedValueOnce({
+        id: 11,
+        destinationAddress: 'Rua A',
+        driverId: 4,
+      });
+      mockRepository.findOne.mockResolvedValueOnce({
+        id: 11,
+        destinationAddress: 'Rua A',
+        driverId: 4,
+        details: [{ id: 31, descricao: 'Caixa de documentos' }],
+      });
+
       const result = await service.create(dto as any);
 
       expect(mockRepository.create).toHaveBeenCalledWith({
         destinationAddress: 'Rua A',
         driverId: 4,
       });
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockDeliveryDetailRepository.create).toHaveBeenCalledWith({
+        entregaId: 11,
+        descricao: 'Caixa de documentos',
+        categoria: 'Documentos',
+        pesoKg: 1.25,
+        volumeM3: 0.015,
+        quantidade: 1,
+        valorDeclarado: 250,
+      });
+      expect(mockDeliveryDetailRepository.save).toHaveBeenCalledWith([
+        {
+          entregaId: 11,
+          descricao: 'Caixa de documentos',
+          categoria: 'Documentos',
+          pesoKg: 1.25,
+          volumeM3: 0.015,
+          quantidade: 1,
+          valorDeclarado: 250,
+        },
+      ]);
       expect(result).toHaveProperty('driverId', 4);
+      expect(result.details).toHaveLength(1);
+    });
+
+    it('deve rejeitar criacao sem detalhes da entrega', async () => {
+      const dto = { destinationAddress: 'Rua A', motoristaId: 4 };
+
+      await expect(service.create(dto as any)).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -140,7 +229,7 @@ describe('DeliveriesService', () => {
             status: StatusEntrega.EM_ROTA,
           },
         ],
-        relations: ['company', 'occurrences', 'finalization'],
+        relations: ['company', 'occurrences', 'finalization', 'details'],
         order: { id: 'DESC' },
       });
       expect(result).toEqual(activeDeliveries);
@@ -186,7 +275,7 @@ describe('DeliveriesService', () => {
             status: StatusEntrega.CANCELADO,
           },
         ],
-        relations: ['company', 'occurrences', 'finalization'],
+        relations: ['company', 'occurrences', 'finalization', 'details'],
         order: { id: 'DESC' },
       });
       expect(result).toEqual({
@@ -216,12 +305,21 @@ describe('DeliveriesService', () => {
           status: StatusEntrega.EM_ROTA,
         });
 
-      const result = await service.startByUser(77, 9);
+      const result = await service.startByUser(77, 9, {
+        latitudeInicio: -23.5505,
+        longitudeInicio: -46.6333,
+      });
 
       expect(mockUsersService.resolveDriverProfileId).toHaveBeenCalledWith(77);
-      expect(mockRepository.update).toHaveBeenCalledWith(9, {
-        status: StatusEntrega.EM_ROTA,
-      });
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        9,
+        expect.objectContaining({
+          status: StatusEntrega.EM_ROTA,
+          latitudeInicio: -23.5505,
+          longitudeInicio: -46.6333,
+          dataHoraInicio: expect.any(Date),
+        }),
+      );
       expect(result.status).toBe(StatusEntrega.EM_ROTA);
     });
 
@@ -233,9 +331,12 @@ describe('DeliveriesService', () => {
         status: StatusEntrega.ENTREGUE,
       });
 
-      await expect(service.startByUser(77, 9)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.startByUser(77, 9, {
+          latitudeInicio: -23.5505,
+          longitudeInicio: -46.6333,
+        }),
+      ).rejects.toThrow(ConflictException);
       expect(mockRepository.update).not.toHaveBeenCalled();
     });
 
@@ -243,9 +344,12 @@ describe('DeliveriesService', () => {
       mockUsersService.resolveDriverProfileId.mockResolvedValue(14);
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.startByUser(77, 999)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.startByUser(77, 999, {
+          latitudeInicio: -23.5505,
+          longitudeInicio: -46.6333,
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

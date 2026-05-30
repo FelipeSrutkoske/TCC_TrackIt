@@ -121,6 +121,41 @@ describe('DeliveryFinalizationScreen', () => {
     expect(screen.getByTestId('delivery-finalization-scroll').props.scrollEnabled).toBe(true);
   });
 
+  it('shows cargo details before finalizing the delivery', () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{
+            key: 'DeliveryFinalization-1',
+            name: 'DeliveryFinalization',
+            params: {
+              delivery: {
+                ...deliveryFixture,
+                details: [
+                  {
+                    id: 10,
+                    entregaId: 2,
+                    descricao: 'Caixa de documentos',
+                    categoria: 'Documentos',
+                    pesoKg: '1.250',
+                    volumeM3: '0.0150',
+                    quantidade: 1,
+                    valorDeclarado: '250.00',
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Conferencia da carga')).toBeOnTheScreen();
+    expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
+    expect(screen.getByText('Documentos')).toBeOnTheScreen();
+  });
+
   it('shows an operational error when GPS is unavailable', async () => {
     mockGetCurrentCoordinates.mockResolvedValueOnce(null);
 

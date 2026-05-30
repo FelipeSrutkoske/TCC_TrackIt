@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
+import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
 import { AppHeader } from '../components/AppHeader';
 import { AppScreen } from '../components/AppScreen';
 import { InfoRow } from '../components/InfoRow';
@@ -14,6 +15,7 @@ import { RootStackParamList } from '../navigation/types';
 import { startDelivery } from '../services/deliveries.service';
 import { Delivery } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getCurrentCoordinates } from '../utils/location';
 import { openDeliveryAddressInMaps } from '../utils/maps';
 
 function getDeliveryPhase(status: Delivery['status']) {
@@ -50,7 +52,17 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
     setError(null);
 
     try {
-      const updatedDelivery = await startDelivery(delivery.id, session.accessToken);
+      const coordenadasInicio = await getCurrentCoordinates();
+
+      if (!coordenadasInicio) {
+        setError('Nao foi possivel capturar a localizacao de inicio da entrega.');
+        return;
+      }
+
+      const updatedDelivery = await startDelivery(delivery.id, session.accessToken, {
+        latitudeInicio: coordenadasInicio.latitude,
+        longitudeInicio: coordenadasInicio.longitude,
+      });
 
       setDelivery(updatedDelivery);
       await openDeliveryAddressInMaps(updatedDelivery.destinationAddress);
@@ -78,6 +90,12 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
           <InfoRow label="Destino" value={delivery.destinationAddress} />
           <InfoRow label="Motorista vinculado" value={`#${delivery.driverId}`} />
         </AppCard>
+
+        <DeliveryDetailsSummary
+          details={delivery.details}
+          emptyMessage="Nenhum detalhe de carga informado para esta entrega."
+          title="Detalhes da carga"
+        />
 
         <AppCard>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes</Text>

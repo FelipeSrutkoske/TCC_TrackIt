@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
+import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
 import { AppHeader } from '../components/AppHeader';
 import { AppScreen } from '../components/AppScreen';
 import { InfoRow } from '../components/InfoRow';
@@ -121,6 +122,12 @@ export function DeliveryFinalizationScreen({
           <InfoRow label="Destino" value={route.params.delivery.destinationAddress} />
           <InfoRow label="Status atual" value="Em rota" />
         </AppCard>
+
+        <DeliveryDetailsSummary
+          details={route.params.delivery.details}
+          emptyMessage="Nenhum detalhe de carga informado para esta entrega."
+          title="Conferencia da carga"
+        />
 
         <AppCard>
           <Text style={[styles.label, { color: theme.colors.text }]}>Nome do recebedor</Text>

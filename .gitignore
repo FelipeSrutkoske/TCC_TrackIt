@@ -22,6 +22,9 @@ Dev.MD
 **/.next/
 **/out/
 
+#docs
+docs/diagrams/
+
 # production
 /build
 **/dist/

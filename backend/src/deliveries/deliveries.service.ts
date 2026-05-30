@@ -1,13 +1,16 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Delivery, StatusEntrega } from './entities/delivery.entity';
+import { DeliveryDetail } from './entities/delivery-detail.entity';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
+import { StartDeliveryDto } from './dto/start-delivery.dto';
 import { UsersService } from '../users/users.service';
 
 export interface DriverDeliveryHistoryMetrics {
@@ -28,21 +31,56 @@ export class DeliveriesService {
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly usersService: UsersService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  create(createDeliveryDto: CreateDeliveryDto): Promise<Delivery> {
-    const data = { ...createDeliveryDto };
-    if (data.motoristaId !== undefined) {
-      data.driverId = data.motoristaId;
-      delete data.motoristaId;
+  async create(createDeliveryDto: CreateDeliveryDto): Promise<Delivery> {
+    const { detalhesEntrega, motoristaId, ...deliveryData } = createDeliveryDto;
+
+    if (!detalhesEntrega?.length) {
+      throw new BadRequestException(
+        'Adicione pelo menos um detalhe da entrega',
+      );
     }
-    const delivery = this.deliveriesRepository.create(data);
-    return this.deliveriesRepository.save(delivery);
+
+    const createdDeliveryId = await this.dataSource.transaction(
+      async (entityManager) => {
+        const deliveryRepository = entityManager.getRepository(Delivery);
+        const detailRepository = entityManager.getRepository(DeliveryDetail);
+        const data = { ...deliveryData };
+
+        if (motoristaId !== undefined) {
+          data.driverId = motoristaId;
+        }
+
+        const delivery = deliveryRepository.create(data);
+        const savedDelivery = await deliveryRepository.save(delivery);
+        const details = detalhesEntrega.map((itemDetalheEntrega) =>
+          detailRepository.create({
+            entregaId: savedDelivery.id,
+            ...itemDetalheEntrega,
+          }),
+        );
+
+        await detailRepository.save(details);
+
+        return savedDelivery.id;
+      },
+    );
+
+    return this.findOne(createdDeliveryId);
   }
 
   findAll(): Promise<Delivery[]> {
     return this.deliveriesRepository.find({
-      relations: ['company', 'driver', 'driver.user', 'occurrences'],
+      relations: [
+        'company',
+        'driver',
+        'driver.user',
+        'occurrences',
+        'finalization',
+        'details',
+      ],
       order: { id: 'DESC' },
     });
   }
@@ -61,7 +99,7 @@ export class DeliveriesService {
           status: StatusEntrega.EM_ROTA,
         },
       ],
-      relations: ['company', 'occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization', 'details'],
       order: { id: 'DESC' },
     });
   }
@@ -81,7 +119,7 @@ export class DeliveriesService {
           status: StatusEntrega.CANCELADO,
         },
       ],
-      relations: ['company', 'occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization', 'details'],
       order: { id: 'DESC' },
     });
 
@@ -128,7 +166,14 @@ export class DeliveriesService {
   async findOne(id: number): Promise<Delivery> {
     const delivery = await this.deliveriesRepository.findOne({
       where: { id },
-      relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization'],
+      relations: [
+        'company',
+        'driver',
+        'driver.user',
+        'occurrences',
+        'finalization',
+        'details',
+      ],
     });
     if (!delivery) throw new NotFoundException(`Entrega #${id} não encontrada`);
     return delivery;
@@ -138,7 +183,7 @@ export class DeliveriesService {
     const driverId = await this.getRequiredDriverProfileId(userId);
     const delivery = await this.deliveriesRepository.findOne({
       where: { id: deliveryId, driverId },
-      relations: ['company', 'occurrences', 'finalization'],
+      relations: ['company', 'occurrences', 'finalization', 'details'],
     });
 
     if (!delivery) {
@@ -148,7 +193,11 @@ export class DeliveriesService {
     return delivery;
   }
 
-  async startByUser(userId: number, deliveryId: number): Promise<Delivery> {
+  async startByUser(
+    userId: number,
+    deliveryId: number,
+    startDeliveryDto: StartDeliveryDto,
+  ): Promise<Delivery> {
     const delivery = await this.findOwnedByUser(userId, deliveryId);
 
     if (delivery.status !== StatusEntrega.AGUARDANDO_MOTORISTA) {
@@ -157,7 +206,14 @@ export class DeliveriesService {
       );
     }
 
-    return this.updateStatus(deliveryId, StatusEntrega.EM_ROTA);
+    await this.deliveriesRepository.update(deliveryId, {
+      status: StatusEntrega.EM_ROTA,
+      latitudeInicio: startDeliveryDto.latitudeInicio,
+      longitudeInicio: startDeliveryDto.longitudeInicio,
+      dataHoraInicio: new Date(),
+    });
+
+    return this.findOne(deliveryId);
   }
 
   async updateStatus(

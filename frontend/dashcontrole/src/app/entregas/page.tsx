@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { DeliveryProofModal } from "../components/DeliveryProofModal";
@@ -54,7 +55,9 @@ export default function EntregasPage() {
     }
   }, []);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
+  useEffect(() => {
+    void Promise.resolve().then(carregarDados);
+  }, [carregarDados]);
 
   const entregasFiltradas = entregas.filter((e) => {
     const texto = filtro.toLowerCase();
@@ -91,7 +94,18 @@ export default function EntregasPage() {
 
   return (
     <>
-      <Header title="Gerenciamento de Entregas" breadcrumb={["Home", "Entregas"]} />
+      <Header
+        title="Gerenciamento de Entregas"
+        breadcrumb={["Home", "Entregas"]}
+        actions={(
+          <Link
+            className="rounded-xl bg-[#4f654b] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#40543d]"
+            href="/entregas/criarEntrega"
+          >
+            Criar entrega
+          </Link>
+        )}
+      />
       <div className="page-body">
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
         
@@ -161,12 +175,13 @@ export default function EntregasPage() {
                   <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">🏍 Motorista Designado</p>
                   <p className="text-white text-sm">{getNomeMotorista(entregaSelecionada) || "Nenhum"}</p>
                </div>
-               <button 
+                <button 
+                  disabled={salvando}
                   onClick={() => setModalMotoristasAberto(true)}
-                  className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold"
-               >
-                 {getNomeMotorista(entregaSelecionada) ? "Trocar" : "Vincular"}
-               </button>
+                  className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-60"
+                >
+                 {salvando ? "Salvando..." : getNomeMotorista(entregaSelecionada) ? "Trocar" : "Vincular"}
+                </button>
             </div>
             <button
               onClick={() => setModalComprovanteAberto(true)}
@@ -205,7 +220,11 @@ export default function EntregasPage() {
           deliveryId={entregaSelecionada.id}
           destinationAddress={entregaSelecionada.destinationAddress}
           driverName={getNomeMotorista(entregaSelecionada) || undefined}
-          finalization={null}
+          finalization={entregaSelecionada.finalization ?? null}
+          latitudeInicio={entregaSelecionada.latitudeInicio ?? null}
+          longitudeInicio={entregaSelecionada.longitudeInicio ?? null}
+          dataHoraInicio={entregaSelecionada.dataHoraInicio ?? null}
+          detalhesEntrega={entregaSelecionada.details ?? []}
         />
       )}
     </>

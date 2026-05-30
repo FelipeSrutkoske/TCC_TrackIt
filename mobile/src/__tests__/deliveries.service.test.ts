@@ -31,11 +31,20 @@ describe('deliveries.service', () => {
     const delivery = { id: 1, driverId: 701, destinationAddress: 'Rua A', status: 'EM_ROTA' };
     mockApiRequest.mockResolvedValueOnce(delivery);
 
-    await expect(startDelivery(1, 'token-1')).resolves.toEqual(delivery);
+    await expect(
+      startDelivery(1, 'token-1', {
+        latitudeInicio: -23.5505,
+        longitudeInicio: -46.6333,
+      }),
+    ).resolves.toEqual(delivery);
 
     expect(mockApiRequest).toHaveBeenCalledWith('/deliveries/1/start', {
       method: 'PATCH',
       token: 'token-1',
+      body: {
+        latitudeInicio: -23.5505,
+        longitudeInicio: -46.6333,
+      },
     });
   });
 

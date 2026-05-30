@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { Header } from "../components/Header";
 import { deliveriesService, DeliveryStats } from "@/services/deliveries.service";
 
@@ -58,7 +58,7 @@ function DonutChart({ slices, size = 180, title }: { slices: DonutSlice[]; size?
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-row items-center justify-start pl-4 sm:pl-10 w-full gap-8 sm:gap-16">
+    <div aria-label={title} className="flex flex-row items-center justify-start pl-4 sm:pl-10 w-full gap-8 sm:gap-16">
       {/* Legenda Vertical na Esquerda */}
       <div className="flex flex-col gap-y-4">
         {slices.map((sl) => (
@@ -148,12 +148,12 @@ function HorizontalBar({ items, total }: { items: { label: string; value: number
 }
 
 // ── Stat card Clássico ────────────────────────────────────────────────
-function StatTile({ label, value, icon: Icon, sub, color, bg }: { label: string; value: string | number; icon: any; sub: string; color: string; bg: string }) {
+function StatTile({ label, value, icon: Icon, sub, color, bg }: { label: string; value: string | number; icon: ComponentType; sub: string; color: string; bg: string }) {
   return (
     <article className="rounded-xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between">
       <div className="flex justify-between items-start mb-4">
         <p className="text-xs font-bold uppercase tracking-wider text-[#748071]">{label}</p>
-        <div className="p-2 rounded-lg" style={{ backgroundColor: bg }}>
+        <div className="p-2 rounded-lg" style={{ backgroundColor: bg, color }}>
           <Icon />
         </div>
       </div>

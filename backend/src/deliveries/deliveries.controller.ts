@@ -11,6 +11,7 @@ import {
 import { DeliveriesService } from './deliveries.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
+import { StartDeliveryDto } from './dto/start-delivery.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../auth/mobile-driver.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -55,8 +56,12 @@ export class DeliveriesController {
 
   @Patch(':id/start')
   @UseGuards(MobileDriverGuard)
-  start(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.deliveriesService.startByUser(user.id, +id);
+  start(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: StartDeliveryDto,
+  ) {
+    return this.deliveriesService.startByUser(user.id, +id, body);
   }
 
   @Patch(':id')

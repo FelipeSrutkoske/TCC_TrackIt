@@ -4,6 +4,17 @@ export type DeliveryStatus =
   | 'ENTREGUE'
   | 'CANCELADO';
 
+export type DeliveryDetail = {
+  id: number;
+  entregaId: number;
+  descricao: string;
+  categoria?: string | null;
+  pesoKg: number | string;
+  volumeM3: number | string;
+  quantidade: number;
+  valorDeclarado: number | string;
+};
+
 export type Delivery = {
   id: number;
   driverId: number;
@@ -17,7 +28,18 @@ export type Delivery = {
   deliveryEstimate?: string | null;
   createdAt?: string | null;
   status: DeliveryStatus;
+  latitudeInicio?: number | string | null;
+  longitudeInicio?: number | string | null;
+  dataHoraInicio?: string | null;
+  details?: DeliveryDetail[];
   finalization?: {
+    receiverName?: string | null;
+    receiverDocument?: string | null;
+    receiverRelation?: string | null;
+    signatureUrl?: string | null;
+    photoUrl?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
     finalizedAt?: string | null;
   } | null;
 };

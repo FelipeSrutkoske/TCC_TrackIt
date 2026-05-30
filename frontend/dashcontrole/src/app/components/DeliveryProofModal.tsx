@@ -1,26 +1,11 @@
-// ============================================================
-// DELIVERY PROOF MODAL — Modal de Comprovante de Entrega
-// ============================================================
-// Exibe: mapa Google Maps, assinatura digital e status da rota.
-// Dados mockados até que a tabela tb_finalizacoes seja preenchida.
-// ============================================================
-
 'use client';
 
-import { useRef, useState } from 'react';
+import {
+  DeliveryDetail,
+  DeliveryFinalization,
+} from '@/services/deliveries.service';
+import { MapRoute } from './MapRoute';
 import { Modal } from './Modal';
-
-interface FinalizationData {
-  receiverName: string;
-  receiverDocument?: string;
-  receiverEmail?: string;
-  signatureUrl?: string;
-  signatureData?: string;
-  photoUrl?: string;
-  latitude?: number;
-  longitude?: number;
-  finalizedAt?: string;
-}
 
 interface DeliveryProofModalProps {
   isOpen: boolean;
@@ -28,108 +13,116 @@ interface DeliveryProofModalProps {
   deliveryId: number;
   destinationAddress: string;
   driverName?: string;
-  finalization?: FinalizationData | null;
-  allowDraw?: boolean;
+  finalization?: DeliveryFinalization | null;
+  latitudeInicio?: number | string | null;
+  longitudeInicio?: number | string | null;
+  dataHoraInicio?: string | null;
+  detalhesEntrega?: DeliveryDetail[];
 }
 
-// ── Mapa Google Maps Embed ───────────────────────────────────
-function EmbedMap({ lat, lng, address }: { lat: number; lng: number; address: string }) {
+function converterCoordenada(valor?: number | string | null): number | null {
+  if (valor === null || valor === undefined || valor === '') {
+    return null;
+  }
+
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function formatarNumeroDecimal(valor: number | string, casas: number): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) {
+    return '-';
+  }
+
+  return numero.toLocaleString('pt-BR', {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas,
+  });
+}
+
+function formatarMoeda(valor: number | string): string {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) {
+    return '-';
+  }
+
+  return numero.toLocaleString('pt-BR', {
+    currency: 'BRL',
+    style: 'currency',
+  });
+}
+
+function formatarDataHora(valor?: string | null): string {
+  if (!valor) {
+    return '-';
+  }
+
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) {
+    return '-';
+  }
+
+  return data.toLocaleString('pt-BR', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatarCoordenadas(latitude: number | null, longitude: number | null): string {
+  if (latitude === null || longitude === null) {
+    return '-';
+  }
+
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+}
+
+function FinalizationPointMap({
+  latitudeFinalizacao,
+  longitudeFinalizacao,
+  destinationAddress,
+}: {
+  latitudeFinalizacao: number;
+  longitudeFinalizacao: number;
+  destinationAddress: string;
+}) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  const mapUrl = apiKey
-    ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${lat},${lng}&zoom=16&maptype=roadmap`
-    : `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1000!2d${lng}!3d${lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1spt!2sbr!4v1`;
+  if (!apiKey) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        Configure a variavel <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> no arquivo .env para carregar o mapa.
+      </div>
+    );
+  }
+
+  const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${latitudeFinalizacao},${longitudeFinalizacao}&zoom=16&maptype=roadmap`;
 
   return (
-    <div className="rounded-xl overflow-hidden border border-zinc-700 relative w-full h-[220px] sm:h-[260px]">
+    <div className="relative h-[220px] w-full overflow-hidden rounded-xl border border-zinc-700 sm:h-[260px]">
       <iframe
-        width="100%"
-        height="100%"
-        style={{ border: 0 }}
-        loading="lazy"
         allowFullScreen
+        height="100%"
+        loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         src={mapUrl}
-        title={`Localização: ${address}`}
+        style={{ border: 0 }}
+        title={`Localizacao final da entrega: ${destinationAddress}`}
+        width="100%"
       />
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-8">
-        <p className="text-white text-sm font-medium truncate">{address}</p>
-        <p className="text-zinc-300 text-[11px]">{lat.toFixed(6)}, {lng.toFixed(6)}</p>
+        <p className="truncate text-sm font-medium text-white">{destinationAddress}</p>
+        <p className="text-[11px] text-zinc-300">
+          {formatarCoordenadas(latitudeFinalizacao, longitudeFinalizacao)}
+        </p>
       </div>
     </div>
   );
 }
 
-// ── Mini-componente do canvas de assinatura ──────────────────
-function SignatureCanvas({ onSave }: { onSave: (dataUrl: string) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
-
-  function getPos(e: React.MouseEvent | React.TouchEvent) {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    if ('touches' in e) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
-    return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
-  }
-
-  function startDraw(e: React.MouseEvent | React.TouchEvent) {
-    drawing.current = true;
-    lastPos.current = getPos(e);
-  }
-
-  function draw(e: React.MouseEvent | React.TouchEvent) {
-    if (!drawing.current) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    const pos = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = '#a8bc94';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    lastPos.current = pos;
-  }
-
-  function stopDraw() {
-    if (!drawing.current) return;
-    drawing.current = false;
-    onSave(canvasRef.current!.toDataURL());
-  }
-
-  return (
-    <div className="w-full h-full flex flex-col pt-1">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-[10px] uppercase text-zinc-500 font-bold z-10">Assinatura</span>
-        <button className="text-[10px] text-zinc-500 hover:text-red-400 z-10 tracking-wider font-bold" onClick={() => {
-          const canvas = canvasRef.current!;
-          const ctx = canvas.getContext('2d')!;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          onSave('');
-        }}>LIMPAR</button>
-      </div>
-      <canvas
-        ref={canvasRef}
-        width={400}
-        height={90}
-        className="w-full flex-1 rounded-lg border border-zinc-700 bg-zinc-900 cursor-crosshair touch-none"
-        onMouseDown={startDraw}
-        onMouseMove={draw}
-        onMouseUp={stopDraw}
-        onMouseLeave={stopDraw}
-        onTouchStart={startDraw}
-        onTouchMove={draw}
-        onTouchEnd={stopDraw}
-      />
-    </div>
-  );
-}
-
-// ── Componente Principal ─────────────────────────────────────
 export function DeliveryProofModal({
   isOpen,
   onClose,
@@ -137,99 +130,155 @@ export function DeliveryProofModal({
   destinationAddress,
   driverName,
   finalization,
-  allowDraw = false,
+  latitudeInicio,
+  longitudeInicio,
+  dataHoraInicio,
+  detalhesEntrega = [],
 }: DeliveryProofModalProps) {
-  const [signatureData, setSignatureData] = useState('');
-
-  // Mock dados caso não haja finalização real ainda da API
-  const mockFinalization: FinalizationData = finalization ?? {
-    receiverName: 'João da Silva (MOCK)',
-    receiverDocument: '123.456.789-00',
-    receiverEmail: 'cliente@email.com',
-    latitude: -23.5505,
-    longitude: -46.6333,
-    finalizedAt: new Date().toISOString(),
-  };
-
-  const lat = mockFinalization.latitude ?? -23.5505;
-  const lng = mockFinalization.longitude ?? -46.6333;
+  const latitudeInicioNumerica = converterCoordenada(latitudeInicio);
+  const longitudeInicioNumerica = converterCoordenada(longitudeInicio);
+  const latitudeFinalNumerica = converterCoordenada(finalization?.latitude);
+  const longitudeFinalNumerica = converterCoordenada(finalization?.longitude);
+  const possuiGpsInicio = latitudeInicioNumerica !== null && longitudeInicioNumerica !== null;
+  const possuiGpsFinal = latitudeFinalNumerica !== null && longitudeFinalNumerica !== null;
+  const podeDesenharRota = Boolean(finalization && possuiGpsInicio && possuiGpsFinal);
 
   return (
     <Modal
+      description={destinationAddress}
       isOpen={isOpen}
       onClose={onClose}
-      title={`Comprovante — Entrega #${deliveryId}`}
-      description={destinationAddress}
       size="xl"
+      title={`Comprovante - Entrega #${deliveryId}`}
     >
       <div className="space-y-4">
-        
-        {!finalization && (
-          <div className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2 flex items-center gap-2">
-            <span>⚠️</span> Dados mockados — entrega ainda não finalizada no sistema
+        {!finalization ? (
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-300">
+            Entrega ainda nao finalizada. O comprovante sera liberado apos a baixa no mobile.
           </div>
-        )}
+        ) : null}
 
-        {/* 1. MAPA DO GOOGLE (TOPO) */}
-        <EmbedMap lat={lat} lng={lng} address={destinationAddress} />
+        {finalization && !possuiGpsInicio ? (
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-300">
+            GPS de inicio nao registrado para esta entrega. A rota completa nao pode ser desenhada.
+          </div>
+        ) : null}
 
-        {/* 2. LINHA DO MEIO: ASSINATURA + ENTREGUE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[140px]">
-          
-          {/* Caixa da Assinatura */}
-          <div className="rounded-xl border border-zinc-700 bg-zinc-800/40 p-3 h-full relative flex flex-col justify-center">
-            {mockFinalization.signatureUrl || mockFinalization.signatureData || signatureData ? (
-              <>
-                <span className="absolute top-3 left-3 text-[10px] uppercase text-zinc-500 font-bold z-10">Assinatura</span>
-                <div className="w-full h-full pt-6 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={mockFinalization.signatureUrl ?? mockFinalization.signatureData ?? signatureData}
-                    alt="Assinatura do recebedor"
-                    className="max-w-full max-h-full object-contain rounded-lg"
-                  />
-                </div>
-              </>
-            ) : allowDraw ? (
-              <SignatureCanvas onSave={setSignatureData} />
+        {podeDesenharRota ? (
+          <MapRoute
+            destination={{ lat: latitudeFinalNumerica!, lng: longitudeFinalNumerica! }}
+            height={260}
+            label="Rota registrada da entrega"
+            origin={{ lat: latitudeInicioNumerica!, lng: longitudeInicioNumerica! }}
+          />
+        ) : finalization && possuiGpsFinal ? (
+          <FinalizationPointMap
+            destinationAddress={destinationAddress}
+            latitudeFinalizacao={latitudeFinalNumerica!}
+            longitudeFinalizacao={longitudeFinalNumerica!}
+          />
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="relative flex h-[140px] flex-col justify-center rounded-xl border border-zinc-700 bg-zinc-800/40 p-3">
+            <span className="absolute left-3 top-3 z-10 text-[10px] font-bold uppercase text-zinc-500">
+              Assinatura
+            </span>
+            {finalization?.signatureUrl ? (
+              <div className="flex h-full w-full items-center justify-center pt-6">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="Assinatura do recebedor"
+                  className="max-h-full max-w-full rounded-lg object-contain"
+                  src={finalization.signatureUrl}
+                />
+              </div>
             ) : (
-              <>
-                <span className="absolute top-3 left-3 text-[10px] uppercase text-zinc-500 font-bold z-10">Assinatura</span>
-                <div className="w-full h-full flex flex-col items-center justify-center opacity-40">
-                  <span className="text-3xl mb-1">✍</span>
-                  <span className="text-[11px] text-zinc-400">Nenhuma assinatura registrada</span>
-                </div>
-              </>
+              <div className="flex h-full w-full flex-col items-center justify-center opacity-50">
+                <span className="mb-1 text-3xl">✍</span>
+                <span className="text-[11px] text-zinc-400">Nenhuma assinatura registrada</span>
+              </div>
             )}
           </div>
 
-          {/* Caixa de Status (Entregue) */}
-          <div className="rounded-xl border border-[#4f654b]/40 bg-[#4f654b]/10 flex flex-col items-center justify-center h-full gap-2 shadow-inner">
-             <div className="w-12 h-12 rounded-full bg-[#4f654b]/20 flex items-center justify-center border border-[#4f654b]/30">
-                <span className="text-[#8a9488] text-2xl font-bold">✓</span>
-             </div>
-             <span className="text-[#8a9488] font-bold text-[15px] tracking-[0.25em] uppercase mt-1">Entregue</span>
+          <div className="flex h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-[#4f654b]/40 bg-[#4f654b]/10 shadow-inner">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#4f654b]/30 bg-[#4f654b]/20">
+              <span className="text-2xl font-bold text-[#8a9488]">✓</span>
+            </div>
+            <span className="mt-1 text-[15px] font-bold uppercase tracking-[0.25em] text-[#8a9488]">
+              {finalization ? 'Entregue' : 'Aguardando baixa'}
+            </span>
           </div>
-
         </div>
 
-        {/* 3. GRID INFERIOR: DADOS DO RECEBEDOR E ENTREGADOR */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {[
-            { label: 'Nome do recebedor',             value: mockFinalization.receiverName },
-            { label: 'Documento',                     value: mockFinalization.receiverDocument || '—' },
-            { label: 'Email de envio do comprovante', value: mockFinalization.receiverEmail || '—' },
-            { label: 'Entregador',                    value: driverName || '—' }, // Vem do banco ou fallback
-            { label: 'Data de finalização',           value: mockFinalization.finalizedAt ? new Date(mockFinalization.finalizedAt).toLocaleString() : '—' },
-            { label: 'Coordenadas',                   value: `${lat.toFixed(6)}, ${lng.toFixed(6)}` }
+            { label: 'Nome do recebedor', value: finalization?.receiverName || '-' },
+            { label: 'Documento', value: finalization?.receiverDocument || '-' },
+            { label: 'Parentesco ou cargo', value: finalization?.receiverRelation || '-' },
+            { label: 'Entregador', value: driverName || '-' },
+            { label: 'Data de inicio', value: formatarDataHora(dataHoraInicio) },
+            { label: 'Data de finalizacao', value: formatarDataHora(finalization?.finalizedAt) },
+            {
+              label: 'Coordenadas de inicio',
+              value: formatarCoordenadas(latitudeInicioNumerica, longitudeInicioNumerica),
+            },
+            {
+              label: 'Coordenadas de finalizacao',
+              value: formatarCoordenadas(latitudeFinalNumerica, longitudeFinalNumerica),
+            },
           ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl bg-zinc-800/30 p-3 px-4 border border-zinc-700/50">
-              <p className="text-[10px] uppercase text-zinc-500 font-bold mb-0.5 tracking-wider">{label}</p>
-              <p className="text-zinc-200 text-[13px] font-medium leading-relaxed truncate">{value}</p>
+            <div key={label} className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-3 px-4">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                {label}
+              </p>
+              <p className="truncate text-[13px] font-medium leading-relaxed text-zinc-200">{value}</p>
             </div>
           ))}
         </div>
 
+        {finalization?.photoUrl ? (
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Foto do local
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="Foto do local de entrega"
+              className="max-h-64 w-full rounded-lg object-cover"
+              src={finalization.photoUrl}
+            />
+          </div>
+        ) : null}
+
+        {detalhesEntrega.length > 0 ? (
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-4">
+            <h3 className="text-sm font-bold text-zinc-100">Detalhes da entrega</h3>
+            <div className="mt-3 space-y-3">
+              {detalhesEntrega.map((itemDetalheEntrega) => (
+                <div
+                  className="rounded-lg border border-zinc-700/50 bg-zinc-900/40 p-3"
+                  key={itemDetalheEntrega.id}
+                >
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-100">{itemDetalheEntrega.descricao}</p>
+                      <p className="text-xs text-zinc-400">{itemDetalheEntrega.categoria || 'Geral'}</p>
+                    </div>
+                    <p className="text-xs font-bold text-[#8a9488]">
+                      {formatarMoeda(itemDetalheEntrega.valorDeclarado)}
+                    </p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-zinc-300 sm:grid-cols-3">
+                    <span>Qtd: {itemDetalheEntrega.quantidade}</span>
+                    <span>Peso: {formatarNumeroDecimal(itemDetalheEntrega.pesoKg, 3)} kg</span>
+                    <span>Volume: {formatarNumeroDecimal(itemDetalheEntrega.volumeM3, 4)} m3</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </Modal>
   );
