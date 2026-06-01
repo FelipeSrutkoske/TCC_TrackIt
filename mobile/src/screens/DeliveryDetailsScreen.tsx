@@ -4,6 +4,7 @@ import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
 import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
+import { DeliveryRoutePreview } from '../components/DeliveryRoutePreview';
 import { AppHeader } from '../components/AppHeader';
 import { AppScreen } from '../components/AppScreen';
 import { InfoRow } from '../components/InfoRow';
@@ -28,6 +29,8 @@ function getDeliveryPhase(status: Delivery['status']) {
       return 'Entrega concluida';
     case 'CANCELADO':
       return 'Ocorrencia encerrada';
+    case 'COM_OCORRENCIA':
+      return 'Com ocorrencia';
   }
 }
 
@@ -97,6 +100,8 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
           title="Detalhes da carga"
         />
 
+        <DeliveryRoutePreview delivery={delivery} />
+
         <AppCard>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes</Text>
 
@@ -117,6 +122,12 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
                   void openDeliveryAddressInMaps(delivery.destinationAddress);
                 }}
                 title="Abrir no mapa"
+              />
+              <SecondaryButton
+                onPress={() => {
+                  navigation?.navigate('DeliveryOccurrence', { delivery });
+                }}
+                title="Relatar ocorrencia"
               />
               <PrimaryButton
                 onPress={() => {

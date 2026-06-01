@@ -1,19 +1,24 @@
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
 import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
-import { AppHeader } from '../components/AppHeader';
 import { AppScreen } from '../components/AppScreen';
 import { InfoRow } from '../components/InfoRow';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SecondaryButton } from '../components/SecondaryButton';
 import { SignaturePadField } from '../components/SignaturePadField';
 import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { finalizeDelivery } from '../services/finalizations.service';
 import { useAppTheme } from '../theme/AppThemeProvider';
-import { getCurrentCoordinates } from '../utils/location';
+import { Coordinates, getCurrentCoordinates } from '../utils/location';
+import { prepareUploadPhoto } from '../utils/uploadPhoto';
+
+const LOCATION_PROOF_MESSAGE =
+  'Localizacao distante do destino. Anexe uma foto do local para concluir a entrega.';
 
 type DeliveryFinalizationScreenProps = {
   route: RouteProp<RootStackParamList, 'DeliveryFinalization'>;
@@ -36,7 +41,42 @@ export function DeliveryFinalizationScreen({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [locationProofPhoto, setLocationProofPhoto] = useState<string | null>(null);
+  const [locationProofPreviewUri, setLocationProofPreviewUri] = useState<string | null>(null);
+  const [requiresLocationProof, setRequiresLocationProof] = useState(false);
+  const [lastCoordinates, setLastCoordinates] = useState<Coordinates | null>(null);
   const isSubmittingRef = useRef(false);
+
+  async function pickLocationProofPhoto() {
+    setError(null);
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setError('Permita acesso a camera para anexar a foto do local.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      quality: 0.6,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    const photo = await prepareUploadPhoto(asset);
+
+    if (!photo) {
+      setError('Nao foi possivel preparar a foto do local.');
+      return;
+    }
+
+    setLocationProofPhoto(photo.dataUri);
+    setLocationProofPreviewUri(photo.previewUri);
+  }
 
   async function handleSubmit() {
     if (!session?.accessToken || isSubmittingRef.current) {
@@ -67,17 +107,24 @@ export function DeliveryFinalizationScreen({
       return;
     }
 
+    if (requiresLocationProof && !locationProofPhoto) {
+      setError('Anexe uma foto do local para concluir com comprovacao.');
+      return;
+    }
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const coordinates = await getCurrentCoordinates();
+      const coordinates = lastCoordinates ?? (await getCurrentCoordinates());
 
       if (!coordinates) {
         setError('Nao foi possivel confirmar a localizacao atual.');
         return;
       }
+
+      setLastCoordinates(coordinates);
 
       await finalizeDelivery(
         {
@@ -88,15 +135,26 @@ export function DeliveryFinalizationScreen({
           signature,
           latitude: coordinates.latitude,
           longitude: coordinates.longitude,
+          ...(coordinates.accuracy !== undefined
+            ? { gpsAccuracyMeters: coordinates.accuracy }
+            : {}),
+          ...(locationProofPhoto ? { photoUrl: locationProofPhoto } : {}),
         },
         session.accessToken,
       );
 
       navigation?.replace?.('History');
     } catch (nextError) {
-      setError(
-        nextError instanceof Error ? nextError.message : 'Nao foi possivel finalizar a entrega',
-      );
+      const message =
+        nextError instanceof Error ? nextError.message : 'Nao foi possivel finalizar a entrega';
+
+      if (message === LOCATION_PROOF_MESSAGE) {
+        setRequiresLocationProof(true);
+        setError('Sua localizacao parece distante do endereco da entrega. Anexe uma foto do local para concluir.');
+        return;
+      }
+
+      setError(message);
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -194,6 +252,22 @@ export function DeliveryFinalizationScreen({
             value={signature}
           />
 
+          {requiresLocationProof ? (
+            <View style={[styles.proofBox, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted }]}>
+              <Text style={[styles.proofTitle, { color: theme.colors.text }]}>Comprovacao de localizacao</Text>
+              <Text style={[styles.proofText, { color: theme.colors.textMuted }]}>Sua localizacao parece distante do endereco da entrega. Tire uma foto do local para concluir.</Text>
+              <SecondaryButton
+                onPress={() => {
+                  void pickLocationProofPhoto();
+                }}
+                title="Anexar foto do local"
+              />
+              {locationProofPreviewUri ? (
+                <Image source={{ uri: locationProofPreviewUri }} style={styles.proofImage} />
+              ) : null}
+            </View>
+          ) : null}
+
           {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
 
           <PrimaryButton
@@ -201,7 +275,13 @@ export function DeliveryFinalizationScreen({
             onPress={() => {
               void handleSubmit();
             }}
-            title={isSubmitting ? 'Finalizando...' : 'Finalizar entrega'}
+            title={
+              isSubmitting
+                ? 'Finalizando...'
+                : requiresLocationProof
+                  ? 'Finalizar com comprovacao'
+                  : 'Finalizar entrega'
+            }
           />
         </AppCard>
       </ScrollView>
@@ -249,6 +329,25 @@ const styles = StyleSheet.create({
   error: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  proofBox: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  proofTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  proofText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  proofImage: {
+    height: 180,
+    width: '100%',
+    borderRadius: 16,
   },
 });
 

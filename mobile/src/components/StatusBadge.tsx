@@ -9,6 +9,7 @@ const STATUS_LABELS: Record<DeliveryStatus, string> = {
   EM_ROTA: 'Em rota',
   ENTREGUE: 'Entregue',
   CANCELADO: 'Cancelado',
+  COM_OCORRENCIA: 'Com ocorrencia',
 };
 
 const STATUS_COLORS: Record<
@@ -35,6 +36,11 @@ const STATUS_COLORS: Record<
     text: 'statusSuccessText',
   },
   CANCELADO: {
+    background: 'statusDanger',
+    border: 'statusDanger',
+    text: 'statusDangerText',
+  },
+  COM_OCORRENCIA: {
     background: 'statusDanger',
     border: 'statusDanger',
     text: 'statusDangerText',

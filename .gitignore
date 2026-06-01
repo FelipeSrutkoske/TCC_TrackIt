@@ -24,6 +24,14 @@ Dev.MD
 
 #docs
 docs/diagrams/
+docs/implementations/
+docs/spec_1_implementarion29-05/
+
+#images
+images/
+
+#database
+database/
 
 # production
 /build

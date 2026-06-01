@@ -29,10 +29,10 @@ export class Finalization {
   @Column({ name: 'parentesco_ou_cargo', length: 50, nullable: true })
   receiverRelation: string;
 
-  @Column({ name: 'assinatura_digital_url', length: 500 })
+  @Column({ name: 'assinatura_digital_url', type: 'longtext' })
   signatureUrl: string;
 
-  @Column({ name: 'foto_local_url', length: 500, nullable: true })
+  @Column({ name: 'foto_local_url', type: 'longtext', nullable: true })
   photoUrl: string;
 
   @Column({
@@ -52,6 +52,30 @@ export class Finalization {
     nullable: true,
   })
   longitude: number;
+
+  @Column({
+    name: 'gps_accuracy_metros',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  gpsAccuracyMeters: number | null;
+
+  @Column({
+    name: 'distancia_destino_metros',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  distanciaDestinoMetros: number | null;
+
+  @Column({ name: 'gps_validado', type: 'boolean', default: false })
+  gpsValidado: boolean;
+
+  @Column({ name: 'gps_divergente', type: 'boolean', default: false })
+  gpsDivergente: boolean;
 
   @CreateDateColumn({ name: 'data_hora_finalizacao' })
   finalizedAt: Date;

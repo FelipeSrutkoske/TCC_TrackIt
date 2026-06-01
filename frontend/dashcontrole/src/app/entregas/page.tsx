@@ -24,6 +24,7 @@ const CONFIG_STATUS_ENTREGA: Record<
   EM_ROTA:              { label: "Em Rota",   cor: "bg-blue-100 text-blue-800 border-blue-300",     ponto: "bg-blue-500" },
   ENTREGUE:             { label: "Entregue",  cor: "bg-green-100 text-green-800 border-green-300",  ponto: "bg-green-500" },
   CANCELADO:            { label: "Cancelado", cor: "bg-red-100 text-red-800 border-red-300",        ponto: "bg-red-500" },
+  COM_OCORRENCIA:       { label: "Ocorrência", cor: "bg-orange-100 text-orange-800 border-orange-300", ponto: "bg-orange-500" },
 };
 
 
@@ -64,6 +65,7 @@ export default function EntregasPage() {
     return (
       e.destinationAddress.toLowerCase().includes(texto) ||
       e.status.toLowerCase().includes(texto) ||
+      (e.occurrences?.length ? "ocorrencia registrada".includes(texto) : false) ||
       String(e.id).includes(texto)
     );
   });
@@ -146,6 +148,11 @@ export default function EntregasPage() {
                   </span>
                 </div>
                 <p className="text-sm text-[#1f2320] font-medium mb-4 line-clamp-2">{entrega.destinationAddress}</p>
+                {entrega.occurrences?.length ? (
+                  <span className="mb-3 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                    Ocorrencia registrada
+                  </span>
+                ) : null}
                 <div className="pt-3 border-t border-[#e3e8e3] flex justify-between items-center">
                    <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
                    <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
@@ -225,6 +232,7 @@ export default function EntregasPage() {
           longitudeInicio={entregaSelecionada.longitudeInicio ?? null}
           dataHoraInicio={entregaSelecionada.dataHoraInicio ?? null}
           detalhesEntrega={entregaSelecionada.details ?? []}
+          ocorrencias={entregaSelecionada.occurrences ?? []}
         />
       )}
     </>

@@ -3,9 +3,13 @@
 import {
   DeliveryDetail,
   DeliveryFinalization,
+  DeliveryOccurrence,
+  TipoOcorrencia,
 } from '@/services/deliveries.service';
 import { MapRoute } from './MapRoute';
+import { MapPin } from './MapPin';
 import { Modal } from './Modal';
+import { DeliverySignaturePreview } from './DeliverySignaturePreview';
 
 interface DeliveryProofModalProps {
   isOpen: boolean;
@@ -18,7 +22,19 @@ interface DeliveryProofModalProps {
   longitudeInicio?: number | string | null;
   dataHoraInicio?: string | null;
   detalhesEntrega?: DeliveryDetail[];
+  ocorrencias?: DeliveryOccurrence[];
 }
+
+const LABEL_TIPO_OCORRENCIA: Record<TipoOcorrencia, string> = {
+  DESTINATARIO_AUSENTE: 'Destinatario ausente',
+  ENDERECO_NAO_ENCONTRADO: 'Endereco nao encontrado',
+  VEICULO_AVARIADO: 'Veiculo avariado',
+  CARGA_AVARIADA: 'Carga avariada',
+  ACIDENTE: 'Acidente',
+  AREA_INSEGURA: 'Area insegura',
+  GPS_INCOMPATIVEL: 'GPS incompativel',
+  OUTROS: 'Outros',
+};
 
 function converterCoordenada(valor?: number | string | null): number | null {
   if (valor === null || valor === undefined || valor === '') {
@@ -80,6 +96,62 @@ function formatarCoordenadas(latitude: number | null, longitude: number | null):
   return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 }
 
+function formatarDistancia(valor?: number | string | null): string {
+  const distancia = converterCoordenada(valor);
+
+  if (distancia === null) {
+    return '-';
+  }
+
+  if (distancia < 1000) {
+    return `${Math.round(distancia)} m`;
+  }
+
+  return `${(distancia / 1000).toLocaleString('pt-BR', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })} km`;
+}
+
+function calcularDistanciaMetros(origem: { lat: number; lng: number }, destino: { lat: number; lng: number }): number {
+  const raioTerraMetros = 6371000;
+  const paraRadianos = (valor: number) => (valor * Math.PI) / 180;
+  const deltaLatitude = paraRadianos(destino.lat - origem.lat);
+  const deltaLongitude = paraRadianos(destino.lng - origem.lng);
+  const latitude1 = paraRadianos(origem.lat);
+  const latitude2 = paraRadianos(destino.lat);
+  const haversine =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(latitude1) * Math.cos(latitude2) * Math.sin(deltaLongitude / 2) ** 2;
+
+  return Math.round(raioTerraMetros * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine)));
+}
+
+function getStatusValidacaoGps(finalization?: DeliveryFinalization | null) {
+  if (!finalization) {
+    return null;
+  }
+
+  if (finalization.gpsValidado) {
+    return {
+      className: 'border-green-400/20 bg-green-400/10 text-green-300',
+      label: 'GPS validado no destino',
+    };
+  }
+
+  if (finalization.gpsDivergente) {
+    return {
+      className: 'border-orange-400/20 bg-orange-400/10 text-orange-300',
+      label: 'GPS divergente, comprovacao anexada',
+    };
+  }
+
+  return {
+    className: 'border-zinc-600 bg-zinc-800/40 text-zinc-300',
+    label: 'Validacao GPS indisponivel',
+  };
+}
+
 function FinalizationPointMap({
   latitudeFinalizacao,
   longitudeFinalizacao,
@@ -134,6 +206,7 @@ export function DeliveryProofModal({
   longitudeInicio,
   dataHoraInicio,
   detalhesEntrega = [],
+  ocorrencias = [],
 }: DeliveryProofModalProps) {
   const latitudeInicioNumerica = converterCoordenada(latitudeInicio);
   const longitudeInicioNumerica = converterCoordenada(longitudeInicio);
@@ -141,7 +214,16 @@ export function DeliveryProofModal({
   const longitudeFinalNumerica = converterCoordenada(finalization?.longitude);
   const possuiGpsInicio = latitudeInicioNumerica !== null && longitudeInicioNumerica !== null;
   const possuiGpsFinal = latitudeFinalNumerica !== null && longitudeFinalNumerica !== null;
-  const podeDesenharRota = Boolean(finalization && possuiGpsInicio && possuiGpsFinal);
+  const distanciaInicioFinal = possuiGpsInicio && possuiGpsFinal
+    ? calcularDistanciaMetros(
+        { lat: latitudeInicioNumerica!, lng: longitudeInicioNumerica! },
+        { lat: latitudeFinalNumerica!, lng: longitudeFinalNumerica! },
+      )
+    : null;
+  const podeDesenharRota = Boolean(
+    finalization && possuiGpsInicio && possuiGpsFinal && distanciaInicioFinal !== null && distanciaInicioFinal >= 30,
+  );
+  const statusValidacaoGps = getStatusValidacaoGps(finalization);
 
   return (
     <Modal
@@ -171,6 +253,17 @@ export function DeliveryProofModal({
             label="Rota registrada da entrega"
             origin={{ lat: latitudeInicioNumerica!, lng: longitudeInicioNumerica! }}
           />
+        ) : finalization && possuiGpsInicio && possuiGpsFinal ? (
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 p-3">
+            <MapPin
+              className="[&_h3]:text-zinc-100 [&_p]:text-zinc-400"
+              height={260}
+              label="Inicio e finalizacao no mesmo local"
+              lat={latitudeFinalNumerica!}
+              lng={longitudeFinalNumerica!}
+              zoom={17}
+            />
+          </div>
         ) : finalization && possuiGpsFinal ? (
           <FinalizationPointMap
             destinationAddress={destinationAddress}
@@ -179,26 +272,23 @@ export function DeliveryProofModal({
           />
         ) : null}
 
+        {statusValidacaoGps ? (
+          <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${statusValidacaoGps.className}`}>
+            <p>{statusValidacaoGps.label}</p>
+            {finalization?.distanciaDestinoMetros !== undefined && finalization.distanciaDestinoMetros !== null ? (
+              <p className="mt-1 text-xs font-medium opacity-80">
+                Distancia ate o destino: {formatarDistancia(finalization.distanciaDestinoMetros)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="relative flex h-[140px] flex-col justify-center rounded-xl border border-zinc-700 bg-zinc-800/40 p-3">
             <span className="absolute left-3 top-3 z-10 text-[10px] font-bold uppercase text-zinc-500">
               Assinatura
             </span>
-            {finalization?.signatureUrl ? (
-              <div className="flex h-full w-full items-center justify-center pt-6">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt="Assinatura do recebedor"
-                  className="max-h-full max-w-full rounded-lg object-contain"
-                  src={finalization.signatureUrl}
-                />
-              </div>
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center opacity-50">
-                <span className="mb-1 text-3xl">✍</span>
-                <span className="text-[11px] text-zinc-400">Nenhuma assinatura registrada</span>
-              </div>
-            )}
+            <DeliverySignaturePreview signatureUrl={finalization?.signatureUrl} />
           </div>
 
           <div className="flex h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-[#4f654b]/40 bg-[#4f654b]/10 shadow-inner">
@@ -248,6 +338,52 @@ export function DeliveryProofModal({
               className="max-h-64 w-full rounded-lg object-cover"
               src={finalization.photoUrl}
             />
+          </div>
+        ) : null}
+
+        {ocorrencias.length > 0 ? (
+          <div className="rounded-xl border border-orange-400/20 bg-orange-400/10 p-4">
+            <h3 className="text-sm font-bold text-orange-200">Ocorrencias da entrega</h3>
+            <div className="mt-3 space-y-3">
+              {ocorrencias.map((ocorrencia) => {
+                const latitudeOcorrencia = converterCoordenada(ocorrencia.latitude);
+                const longitudeOcorrencia = converterCoordenada(ocorrencia.longitude);
+
+                return (
+                  <div
+                    className="rounded-lg border border-orange-400/20 bg-zinc-950/30 p-3"
+                    key={ocorrencia.id}
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-orange-100">
+                          {LABEL_TIPO_OCORRENCIA[ocorrencia.tipoOcorrencia] ?? ocorrencia.tipoOcorrencia}
+                        </p>
+                        <p className="text-xs text-orange-100/70">
+                          {formatarDataHora(ocorrencia.dataHora)}
+                        </p>
+                      </div>
+                      <p className="text-xs text-orange-100/70">
+                        {formatarCoordenadas(latitudeOcorrencia, longitudeOcorrencia)}
+                      </p>
+                    </div>
+                    {ocorrencia.descricao ? (
+                      <p className="mt-2 text-xs leading-relaxed text-orange-50/90">
+                        {ocorrencia.descricao}
+                      </p>
+                    ) : null}
+                    {ocorrencia.fotoProvaUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt="Foto de prova da ocorrencia"
+                        className="mt-3 max-h-56 w-full rounded-lg object-cover"
+                        src={ocorrencia.fotoProvaUrl}
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : null}
 

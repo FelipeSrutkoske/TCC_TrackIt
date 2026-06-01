@@ -8,6 +8,8 @@ import {
   CreateDeliveryDetailInput,
   deliveriesService,
 } from "@/services/deliveries.service";
+import { companiesService, CompanyOption } from "@/services/companies.service";
+import { geocodeAddress } from "@/services/geocoding.service";
 import { usersService, Usuario } from "@/services/users.service";
 
 const detalheEntregaInicial: CreateDeliveryDetailInput = {
@@ -34,29 +36,33 @@ export default function CriarEntregaPage() {
   const [destinationAddress, setDestinationAddress] = useState("");
   const [deliveryEstimate, setDeliveryEstimate] = useState("");
   const [motoristaId, setMotoristaId] = useState("");
+  const [empresaId, setEmpresaId] = useState("");
   const [detalhesEntrega, setDetalhesEntrega] = useState<CreateDeliveryDetailInput[]>([
     criarDetalheEntregaVazio(),
   ]);
   const [motoristasDisponiveis, setMotoristasDisponiveis] = useState<Usuario[]>([]);
+  const [empresasDisponiveis, setEmpresasDisponiveis] = useState<CompanyOption[]>([]);
   const [carregandoMotoristas, setCarregandoMotoristas] = useState(true);
+  const [carregandoEmpresas, setCarregandoEmpresas] = useState(true);
   const [salvandoEntrega, setSalvandoEntrega] = useState(false);
   const [erroCriacaoEntrega, setErroCriacaoEntrega] = useState<string | null>(null);
 
   useEffect(() => {
-    void usersService
-      .getAll()
-      .then((usuarios) => {
+    void Promise.all([usersService.getAll(), companiesService.getAll()])
+      .then(([usuarios, empresas]) => {
         setMotoristasDisponiveis(
           usuarios.filter((usuario) => usuario.tipoUsuario === "MOTORISTA" && usuario.driverProfile),
         );
+        setEmpresasDisponiveis(empresas);
       })
       .catch((erro) => {
         setErroCriacaoEntrega(
-          erro instanceof Error ? erro.message : "Nao foi possivel carregar motoristas.",
+          erro instanceof Error ? erro.message : "Nao foi possivel carregar dados do formulario.",
         );
       })
       .finally(() => {
         setCarregandoMotoristas(false);
+        setCarregandoEmpresas(false);
       });
   }, []);
 
@@ -92,6 +98,10 @@ export default function CriarEntregaPage() {
   function validarFormularioCriarEntrega(): string | null {
     if (!destinationAddress.trim()) {
       return "Informe o endereco de destino.";
+    }
+
+    if (!empresaId) {
+      return "Selecione a empresa da entrega.";
     }
 
     if (detalhesEntrega.length === 0) {
@@ -140,9 +150,19 @@ export default function CriarEntregaPage() {
     setErroCriacaoEntrega(null);
 
     try {
+      const geocodingResult = await geocodeAddress(destinationAddress);
+
       await deliveriesService.create({
+        empresaId: Number(empresaId),
         ...(motoristaId ? { motoristaId: Number(motoristaId) } : {}),
         destinationAddress: destinationAddress.trim(),
+        ...(geocodingResult
+          ? {
+              latitudeDestino: geocodingResult.latitude,
+              longitudeDestino: geocodingResult.longitude,
+              enderecoDestinoFormatado: geocodingResult.formattedAddress,
+            }
+          : {}),
         ...(deliveryEstimate ? { deliveryEstimate: new Date(deliveryEstimate).toISOString() } : {}),
         status: "AGUARDANDO_MOTORISTA",
         detalhesEntrega: detalhesEntrega.map((itemDetalheEntrega) => ({
@@ -206,6 +226,25 @@ export default function CriarEntregaPage() {
                   type="text"
                   value={destinationAddress}
                 />
+              </label>
+
+              <label>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#63705f]">
+                  Empresa cliente
+                </span>
+                <select
+                  className="mt-2 w-full rounded-xl border border-[#c4ccc3] bg-white px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
+                  disabled={carregandoEmpresas}
+                  onChange={(event) => setEmpresaId(event.target.value)}
+                  value={empresaId}
+                >
+                  <option value="">Selecione a empresa</option>
+                  {empresasDisponiveis.map((empresa) => (
+                    <option key={empresa.id} value={empresa.id}>
+                      {empresa.tradeName || empresa.corporateName}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>
@@ -403,7 +442,7 @@ export default function CriarEntregaPage() {
               disabled={salvandoEntrega}
               type="submit"
             >
-              {salvandoEntrega ? "Criando entrega..." : "Criar entrega"}
+              {salvandoEntrega ? "Criando e validando endereco..." : "Criar entrega"}
             </button>
           </div>
         </form>

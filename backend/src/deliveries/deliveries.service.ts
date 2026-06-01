@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Delivery, StatusEntrega } from './entities/delivery.entity';
 import { DeliveryDetail } from './entities/delivery-detail.entity';
+import { Company } from './entities/company.entity';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { StartDeliveryDto } from './dto/start-delivery.dto';
@@ -30,17 +31,34 @@ export class DeliveriesService {
   constructor(
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
+    @InjectRepository(Company)
+    private readonly companiesRepository: Repository<Company>,
     private readonly usersService: UsersService,
     private readonly dataSource: DataSource,
   ) {}
 
   async create(createDeliveryDto: CreateDeliveryDto): Promise<Delivery> {
-    const { detalhesEntrega, motoristaId, ...deliveryData } = createDeliveryDto;
+    const { detalhesEntrega, motoristaId, empresaId, ...deliveryData } =
+      createDeliveryDto;
 
     if (!detalhesEntrega?.length) {
       throw new BadRequestException(
         'Adicione pelo menos um detalhe da entrega',
       );
+    }
+
+    const companyId = empresaId ?? deliveryData.companyId;
+
+    if (!companyId) {
+      throw new BadRequestException('Selecione a empresa da entrega');
+    }
+
+    const company = await this.companiesRepository.findOne({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new BadRequestException('Empresa selecionada nao encontrada');
     }
 
     const createdDeliveryId = await this.dataSource.transaction(
@@ -52,6 +70,8 @@ export class DeliveriesService {
         if (motoristaId !== undefined) {
           data.driverId = motoristaId;
         }
+
+        data.companyId = companyId;
 
         const delivery = deliveryRepository.create(data);
         const savedDelivery = await deliveryRepository.save(delivery);

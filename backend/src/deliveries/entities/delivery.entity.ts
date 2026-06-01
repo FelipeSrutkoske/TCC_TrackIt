@@ -18,6 +18,7 @@ export enum StatusEntrega {
   EM_ROTA = 'EM_ROTA',
   ENTREGUE = 'ENTREGUE',
   CANCELADO = 'CANCELADO',
+  COM_OCORRENCIA = 'COM_OCORRENCIA',
 }
 
 @Entity('tb_entregas')
@@ -41,6 +42,32 @@ export class Delivery {
 
   @Column({ name: 'endereco_destino', length: 255 })
   destinationAddress: string;
+
+  @Column({
+    name: 'latitude_destino',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
+  latitudeDestino: number | null;
+
+  @Column({
+    name: 'longitude_destino',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
+  longitudeDestino: number | null;
+
+  @Column({
+    name: 'endereco_destino_formatado',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  enderecoDestinoFormatado: string | null;
 
   @Column({ name: 'previsao_entrega', type: 'datetime', nullable: true })
   deliveryEstimate: Date;
@@ -66,7 +93,7 @@ export class Delivery {
   })
   longitudeInicio: number | null;
 
-  @Column({ name: 'data_hora_inicio', type: 'datetime', nullable: true })
+  @Column({ name: 'data_horario_inicio', type: 'datetime', nullable: true })
   dataHoraInicio: Date | null;
 
   @Column({

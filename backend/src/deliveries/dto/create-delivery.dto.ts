@@ -20,11 +20,31 @@ export class CreateDeliveryDto {
 
   @IsOptional()
   @IsNumber()
+  companyId?: number;
+
+  @IsOptional()
+  @IsNumber()
   motoristaId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  empresaId?: number;
 
   @IsNotEmpty({ message: 'O endereço de destino é obrigatório' })
   @IsString()
   destinationAddress: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitudeDestino?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitudeDestino?: number;
+
+  @IsOptional()
+  @IsString()
+  enderecoDestinoFormatado?: string;
 
   @IsOptional()
   @IsDateString()

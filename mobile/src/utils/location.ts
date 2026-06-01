@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 export type Coordinates = {
   latitude: number;
   longitude: number;
+  accuracy?: number | null;
 };
 
 export async function getCurrentCoordinates(): Promise<Coordinates | null> {
@@ -19,5 +20,6 @@ export async function getCurrentCoordinates(): Promise<Coordinates | null> {
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
+    accuracy: position.coords.accuracy,
   };
 }

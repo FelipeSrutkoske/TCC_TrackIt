@@ -9,11 +9,13 @@ import {
 import { Delivery } from '../../deliveries/entities/delivery.entity';
 
 export enum TipoOcorrencia {
-  VEICULO_QUEBRADO = 'VEICULO_QUEBRADO',
+  DESTINATARIO_AUSENTE = 'DESTINATARIO_AUSENTE',
   ENDERECO_NAO_ENCONTRADO = 'ENDERECO_NAO_ENCONTRADO',
-  CLIENTE_AUSENTE = 'CLIENTE_AUSENTE',
+  VEICULO_AVARIADO = 'VEICULO_AVARIADO',
   CARGA_AVARIADA = 'CARGA_AVARIADA',
   ACIDENTE = 'ACIDENTE',
+  AREA_INSEGURA = 'AREA_INSEGURA',
+  GPS_INCOMPATIVEL = 'GPS_INCOMPATIVEL',
   OUTROS = 'OUTROS',
 }
 
@@ -39,7 +41,7 @@ export class Occurrence {
   @Column({ type: 'text', nullable: true })
   descricao: string;
 
-  @Column({ name: 'foto_prova_url', length: 500, nullable: true })
+  @Column({ name: 'foto_prova_url', type: 'longtext', nullable: true })
   fotoProvaUrl: string;
 
   @Column({
@@ -59,6 +61,15 @@ export class Occurrence {
     nullable: true,
   })
   longitude: number;
+
+  @Column({
+    name: 'gps_accuracy_metros',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  gpsAccuracyMeters: number | null;
 
   @CreateDateColumn({ name: 'data_hora' })
   dataHora: Date;

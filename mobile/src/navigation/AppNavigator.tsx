@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { DeliveryDetailsScreen } from '../screens/DeliveryDetailsScreen';
 import { CurrentDeliveriesScreen } from '../screens/CurrentDeliveriesScreen';
 import { DeliveryFinalizationScreen } from '../screens/DeliveryFinalizationScreen';
+import { DeliveryOccurrenceScreen } from '../screens/DeliveryOccurrenceScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -55,6 +56,7 @@ export function AppNavigator() {
             <Stack.Screen component={CurrentDeliveriesScreen} name="CurrentDeliveries" />
             <Stack.Screen component={DeliveryDetailsScreen} name="DeliveryDetails" />
             <Stack.Screen component={DeliveryFinalizationScreen} name="DeliveryFinalization" />
+            <Stack.Screen component={DeliveryOccurrenceScreen} name="DeliveryOccurrence" />
             <Stack.Screen component={HistoryScreen} name="History" />
             <Stack.Screen component={SettingsScreen} name="Settings" />
           </>

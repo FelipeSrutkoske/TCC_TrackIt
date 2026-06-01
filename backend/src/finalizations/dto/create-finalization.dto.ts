@@ -32,4 +32,8 @@ export class CreateFinalizationDto {
   @IsNotEmpty()
   @IsNumber()
   longitude: number;
+
+  @IsOptional()
+  @IsNumber()
+  gpsAccuracyMeters?: number | null;
 }

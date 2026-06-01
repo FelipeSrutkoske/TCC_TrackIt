@@ -2,7 +2,8 @@ export type DeliveryStatus =
   | 'AGUARDANDO_MOTORISTA'
   | 'EM_ROTA'
   | 'ENTREGUE'
-  | 'CANCELADO';
+  | 'CANCELADO'
+  | 'COM_OCORRENCIA';
 
 export type DeliveryDetail = {
   id: number;
@@ -25,6 +26,9 @@ export type Delivery = {
     tradeName?: string | null;
   } | null;
   destinationAddress: string;
+  latitudeDestino?: number | string | null;
+  longitudeDestino?: number | string | null;
+  enderecoDestinoFormatado?: string | null;
   deliveryEstimate?: string | null;
   createdAt?: string | null;
   status: DeliveryStatus;

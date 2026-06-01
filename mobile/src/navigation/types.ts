@@ -12,4 +12,7 @@ export type RootStackParamList = {
   DeliveryFinalization: {
     delivery: Delivery;
   };
+  DeliveryOccurrence: {
+    delivery: Delivery;
+  };
 };

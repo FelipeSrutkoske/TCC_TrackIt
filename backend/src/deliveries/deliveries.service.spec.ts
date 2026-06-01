@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { DeliveryDetail } from './entities/delivery-detail.entity';
+import { Company } from './entities/company.entity';
 
 describe('DeliveriesService', () => {
   let service: DeliveriesService;
@@ -59,6 +60,12 @@ describe('DeliveriesService', () => {
           useValue: mockRepository,
         },
         {
+          provide: getRepositoryToken(Company),
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ id: 1 }),
+          },
+        },
+        {
           provide: getRepositoryToken(DeliveryDetail),
           useValue: mockDeliveryDetailRepository,
         },
@@ -85,6 +92,7 @@ describe('DeliveriesService', () => {
       const dto = {
         destinationAddress: 'Rua A',
         motoristaId: 4,
+        empresaId: 1,
         detalhesEntrega: [
           {
             descricao: 'Caixa de documentos',
@@ -100,6 +108,7 @@ describe('DeliveriesService', () => {
         id: 11,
         destinationAddress: 'Rua A',
         driverId: 4,
+        companyId: 1,
       });
       mockRepository.findOne.mockResolvedValueOnce({
         id: 11,

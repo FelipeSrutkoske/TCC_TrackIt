@@ -8,6 +8,8 @@ export type DeliveryFinalizationPayload = {
   signature: string;
   latitude: number;
   longitude: number;
+  gpsAccuracyMeters?: number | null;
+  photoUrl?: string;
 };
 
 export type DeliveryFinalizationResponse = {
@@ -15,8 +17,13 @@ export type DeliveryFinalizationResponse = {
   deliveryId: number;
   receiverName: string;
   signatureUrl: string;
+  photoUrl?: string | null;
   latitude: number;
   longitude: number;
+  gpsAccuracyMeters?: number | string | null;
+  distanciaDestinoMetros?: number | string | null;
+  gpsValidado?: boolean;
+  gpsDivergente?: boolean;
   finalizedAt: string;
 };
 

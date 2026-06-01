@@ -6,6 +6,7 @@ import { DeliveriesModule } from './deliveries/deliveries.module';
 import { OccurrencesModule } from './occurrences/occurrences.module';
 import { FinalizationsModule } from './finalizations/finalizations.module';
 import { AuthModule } from './auth/auth.module';
+import { CompaniesModule } from './companies/companies.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthModule } from './auth/auth.module';
     DeliveriesModule,
     OccurrencesModule,
     FinalizationsModule,
+    CompaniesModule,
     AuthModule,
   ],
   controllers: [],

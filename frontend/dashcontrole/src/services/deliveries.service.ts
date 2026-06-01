@@ -1,6 +1,21 @@
 import { apiFetch } from '@/lib/api';
 
-export type StatusEntrega = 'AGUARDANDO_MOTORISTA' | 'EM_ROTA' | 'ENTREGUE' | 'CANCELADO';
+export type StatusEntrega =
+  | 'AGUARDANDO_MOTORISTA'
+  | 'EM_ROTA'
+  | 'ENTREGUE'
+  | 'CANCELADO'
+  | 'COM_OCORRENCIA';
+
+export type TipoOcorrencia =
+  | 'DESTINATARIO_AUSENTE'
+  | 'ENDERECO_NAO_ENCONTRADO'
+  | 'VEICULO_AVARIADO'
+  | 'CARGA_AVARIADA'
+  | 'ACIDENTE'
+  | 'AREA_INSEGURA'
+  | 'GPS_INCOMPATIVEL'
+  | 'OUTROS';
 
 export interface DeliveryDetail {
   id: number;
@@ -23,8 +38,12 @@ export interface CreateDeliveryDetailInput {
 }
 
 export interface CreateDeliveryInput {
+  empresaId: number;
   motoristaId?: number;
   destinationAddress: string;
+  latitudeDestino?: number;
+  longitudeDestino?: number;
+  enderecoDestinoFormatado?: string;
   deliveryEstimate?: string;
   status?: StatusEntrega;
   detalhesEntrega: CreateDeliveryDetailInput[];
@@ -32,7 +51,14 @@ export interface CreateDeliveryInput {
 
 export interface DeliveryOccurrence {
   id: number;
-  [key: string]: unknown;
+  deliveryId: number;
+  tipoOcorrencia: TipoOcorrencia;
+  descricao?: string | null;
+  fotoProvaUrl?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  gpsAccuracyMeters?: number | string | null;
+  dataHora?: string | null;
 }
 
 export interface DeliveryFinalization {
@@ -45,6 +71,10 @@ export interface DeliveryFinalization {
   photoUrl?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
+  gpsAccuracyMeters?: number | string | null;
+  distanciaDestinoMetros?: number | string | null;
+  gpsValidado?: boolean | null;
+  gpsDivergente?: boolean | null;
   finalizedAt?: string | null;
 }
 
@@ -53,6 +83,9 @@ export interface Entrega {
   driverId: number | null;
   companyId?: number | null;
   destinationAddress: string;
+  latitudeDestino?: number | string | null;
+  longitudeDestino?: number | string | null;
+  enderecoDestinoFormatado?: string | null;
   deliveryEstimate: string | null;
   createdAt?: string | null;
   status: StatusEntrega;
