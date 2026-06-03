@@ -55,7 +55,7 @@ export function DeliverySignaturePreview({ signatureUrl }: { signatureUrl?: stri
     );
   }
 
-  const parsedSignature = signatureUrl.startsWith('sig:')
+  const parsedSignature = signatureUrl.startsWith('sig:') || signatureUrl.startsWith('sig2:')
     ? parseSignaturePayload(signatureUrl)
     : null;
 
