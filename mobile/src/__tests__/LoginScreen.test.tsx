@@ -69,6 +69,18 @@ describe('LoginScreen', () => {
     expect(screen.getByTestId('login-keyboard-container')).toBeOnTheScreen();
   });
 
+  it('prepara o formulario para rolar quando email ou senha recebem foco', () => {
+    render(
+      <AppThemeProvider>
+        <LoginScreen />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByTestId('login-scroll-view')).toBeOnTheScreen();
+    expect(typeof screen.getByLabelText('E-mail').props.onFocus).toBe('function');
+    expect(typeof screen.getByLabelText('Senha').props.onFocus).toBe('function');
+  });
+
   it('shows backend error message after failed login', async () => {
     mockLogin.mockRejectedValueOnce(new Error('Acesso permitido apenas para motoristas'));
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -40,6 +40,7 @@ function EyeIcon({ color, open }: { color: string; open: boolean }) {
 export function LoginScreen() {
   const { login } = useAuth();
   const { theme } = useAppTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -65,10 +66,17 @@ export function LoginScreen() {
     }
   }
 
+  function scrollToForm(y = 260) {
+    requestAnimationFrame(() => {
+      scrollViewRef.current?.scrollTo({ y, animated: true });
+    });
+  }
+
   return (
     <AppScreen>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
         style={styles.keyboardContainer}
         testID="login-keyboard-container"
       >
@@ -76,6 +84,8 @@ export function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          ref={scrollViewRef}
+          testID="login-scroll-view"
         >
           <View style={styles.container}>
             <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
@@ -102,6 +112,7 @@ export function LoginScreen() {
                     autoCorrect={false}
                     keyboardType="email-address"
                     onChangeText={setEmail}
+                    onFocus={() => scrollToForm(240)}
                     placeholder="motorista@empresa.com"
                     placeholderTextColor={theme.colors.textMuted}
                     style={[
@@ -131,6 +142,7 @@ export function LoginScreen() {
                     <TextInput
                       accessibilityLabel="Senha"
                       onChangeText={setSenha}
+                      onFocus={() => scrollToForm(320)}
                       placeholder="Sua senha"
                       placeholderTextColor={theme.colors.textMuted}
                       secureTextEntry={!showPassword}
@@ -176,6 +188,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 120,
   },
   container: {
     flexGrow: 1,

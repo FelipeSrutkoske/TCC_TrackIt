@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { CurrentDeliveriesScreen } from '../screens/CurrentDeliveriesScreen';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { Delivery } from '../types/delivery';
@@ -61,14 +61,35 @@ describe('CurrentDeliveriesScreen', () => {
     });
 
     expect(await screen.findByText('Operacao ativa')).toBeOnTheScreen();
-    expect(screen.getByText('2')).toBeOnTheScreen();
-    expect(screen.getByText('Ativas')).toBeOnTheScreen();
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Em rota').length).toBeGreaterThan(0);
-    expect(screen.getByText('Aguardando')).toBeOnTheScreen();
+    expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
+    expect(screen.getByText('2 Ativas')).toBeOnTheScreen();
+    expect(screen.getByText('1 Em rota')).toBeOnTheScreen();
+    expect(screen.getByText('1 Aguardando')).toBeOnTheScreen();
     expect(await screen.findByText('Rua B, 200 - Centro')).toBeOnTheScreen();
     expect(screen.getByText('Rua A, 100 - Centro')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando motorista')).toBeOnTheScreen();
+  });
+
+  it('expande e recolhe o resumo operacional ao tocar no card', async () => {
+    mockListCurrentDeliveries.mockResolvedValueOnce(deliveriesFixture);
+
+    render(
+      <AppThemeProvider>
+        <CurrentDeliveriesScreen />
+      </AppThemeProvider>,
+    );
+
+    await screen.findByText('Operacao ativa');
+
+    expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Expandir resumo da operacao' }));
+
+    expect(screen.getByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Recolher resumo da operacao' }));
+
+    expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
   });
 
   it('shows an operational empty state when there are no current deliveries', async () => {

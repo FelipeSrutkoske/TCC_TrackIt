@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { DeliveryCard } from '../components/DeliveryCard';
 import { EmptyState } from '../components/EmptyState';
@@ -22,6 +22,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const inRouteDeliveries = useMemo(
     () => deliveries.filter((delivery) => delivery.status === 'EM_ROTA').length,
     [deliveries],
@@ -68,26 +69,48 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
   return (
     <AppScreen>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
-          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Operacao ativa</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entregas atuais</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.</Text>
-
-          <View style={styles.metricsRow}>
-            <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}> 
-              <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Ativas</Text>
-              <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{deliveries.length}</Text>
+        <Pressable
+          accessibilityLabel={isSummaryExpanded ? 'Recolher resumo da operacao' : 'Expandir resumo da operacao'}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isSummaryExpanded }}
+          onPress={() => setIsSummaryExpanded((current) => !current)}
+          style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}
+        >
+          <View style={styles.heroHeader}>
+            <View style={styles.heroHeaderText}>
+              <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Operacao ativa</Text>
+              <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entregas atuais</Text>
             </View>
-            <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}> 
-              <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Em rota</Text>
-              <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{inRouteDeliveries}</Text>
-            </View>
-            <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}> 
-              <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Aguardando</Text>
-              <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{awaitingDeliveries}</Text>
-            </View>
+            <Text style={[styles.chevron, { color: theme.colors.accentText }]}>{isSummaryExpanded ? '^' : 'v'}</Text>
           </View>
-        </View>
+
+          <View style={styles.compactMetricsRow}>
+            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{deliveries.length} Ativas</Text>
+            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{inRouteDeliveries} Em rota</Text>
+            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{awaitingDeliveries} Aguardando</Text>
+          </View>
+
+          {isSummaryExpanded ? (
+            <>
+              <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.</Text>
+
+              <View style={styles.metricsRow}>
+                <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}>
+                  <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Ativas</Text>
+                  <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{deliveries.length}</Text>
+                </View>
+                <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}>
+                  <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Em rota</Text>
+                  <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{inRouteDeliveries}</Text>
+                </View>
+                <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}>
+                  <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Aguardando</Text>
+                  <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{awaitingDeliveries}</Text>
+                </View>
+              </View>
+            </>
+          ) : null}
+        </Pressable>
 
         {isLoading ? <LoadingState message="Carregando entregas..." /> : null}
 
@@ -134,6 +157,20 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 20,
   },
+  heroHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroHeaderText: {
+    flex: 1,
+    gap: 4,
+  },
+  chevron: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
   heroEyebrow: {
     fontSize: 12,
     fontWeight: '700',
@@ -152,6 +189,21 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  compactMetricsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  compactMetric: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   metric: {
     borderRadius: 18,

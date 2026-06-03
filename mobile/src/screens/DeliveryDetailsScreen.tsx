@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
@@ -17,7 +18,7 @@ import { startDelivery } from '../services/deliveries.service';
 import { Delivery } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
 import { getCurrentCoordinates } from '../utils/location';
-import { openDeliveryAddressInMaps } from '../utils/maps';
+import { openDeliveryAddressInMaps, openDeliveryDirectionsInMaps } from '../utils/maps';
 
 function getDeliveryPhase(status: Delivery['status']) {
   switch (status) {
@@ -34,6 +35,24 @@ function getDeliveryPhase(status: Delivery['status']) {
   }
 }
 
+function toNumber(value?: number | string | null) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function MapNavigationIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={24} viewBox="0 0 24 24" width={24}>
+      <Path d="M12 21s6-5.35 6-11a6 6 0 0 0-12 0c0 5.65 6 11 6 11Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Path d="M12 12.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
 type DeliveryDetailsScreenProps = {
   route: RouteProp<RootStackParamList, 'DeliveryDetails'>;
   navigation?: NativeStackNavigationProp<RootStackParamList, 'DeliveryDetails'>;
@@ -46,7 +65,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleStart() {
+  async function handleStart(openMapsAfterStart = false) {
     if (!session?.accessToken) {
       return;
     }
@@ -68,7 +87,16 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
       });
 
       setDelivery(updatedDelivery);
-      await openDeliveryAddressInMaps(updatedDelivery.destinationAddress);
+
+      if (openMapsAfterStart) {
+        const latitudeDestino = toNumber(updatedDelivery.latitudeDestino);
+        const longitudeDestino = toNumber(updatedDelivery.longitudeDestino);
+        const destination = latitudeDestino !== null && longitudeDestino !== null
+          ? { latitude: latitudeDestino, longitude: longitudeDestino }
+          : updatedDelivery.destinationAddress;
+
+        await openDeliveryDirectionsInMaps(destination);
+      }
     } catch (nextError) {
       setError(
         nextError instanceof Error ? nextError.message : 'Nao foi possivel iniciar a entrega',
@@ -106,13 +134,34 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes</Text>
 
           {delivery.status === 'AGUARDANDO_MOTORISTA' ? (
-            <PrimaryButton
-              disabled={isSubmitting}
-              onPress={() => {
-                void handleStart();
-              }}
-              title={isSubmitting ? 'Iniciando...' : 'Iniciar entrega'}
-            />
+            <View style={styles.startActionsRow}>
+              <View style={styles.startPrimaryAction}>
+                <PrimaryButton
+                  disabled={isSubmitting}
+                  onPress={() => {
+                    void handleStart(false);
+                  }}
+                  title={isSubmitting ? 'Iniciando...' : 'Iniciar entrega'}
+                />
+              </View>
+              <Pressable
+                accessibilityLabel="Iniciar entrega e abrir mapa"
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={() => {
+                  void handleStart(true);
+                }}
+                style={[
+                  styles.startMapAction,
+                  {
+                    backgroundColor: isSubmitting ? theme.colors.surfaceMuted : theme.colors.primary,
+                    borderColor: isSubmitting ? theme.colors.border : theme.colors.primary,
+                  },
+                ]}
+              >
+                <MapNavigationIcon color={theme.colors.primaryText} />
+              </Pressable>
+            </View>
           ) : null}
 
           {delivery.status === 'EM_ROTA' ? (
@@ -177,6 +226,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
+  },
+  startActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  startPrimaryAction: {
+    flex: 1,
+  },
+  startMapAction: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 56,
+    width: 64,
   },
   error: {
     fontSize: 14,

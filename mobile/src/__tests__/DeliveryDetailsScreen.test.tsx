@@ -6,7 +6,7 @@ import { Delivery } from '../types/delivery';
 
 const mockUseAuth = jest.fn();
 const mockStartDelivery = jest.fn();
-const mockOpenDeliveryAddressInMaps = jest.fn();
+const mockOpenDeliveryDirectionsInMaps = jest.fn();
 const mockGetCurrentCoordinates = jest.fn();
 
 jest.mock('../contexts/AuthContext', () => ({
@@ -18,7 +18,7 @@ jest.mock('../services/deliveries.service', () => ({
 }));
 
 jest.mock('../utils/maps', () => ({
-  openDeliveryAddressInMaps: (...args: unknown[]) => mockOpenDeliveryAddressInMaps(...args),
+  openDeliveryDirectionsInMaps: (...args: unknown[]) => mockOpenDeliveryDirectionsInMaps(...args),
 }));
 
 jest.mock('../utils/location', () => ({
@@ -38,11 +38,11 @@ describe('DeliveryDetailsScreen', () => {
       session: { accessToken: 'token-1', user: { id: 7, nome: 'Motorista', email: 'm@test.com', tipoUsuario: 'MOTORISTA' } },
     });
     mockStartDelivery.mockReset();
-    mockOpenDeliveryAddressInMaps.mockReset();
+    mockOpenDeliveryDirectionsInMaps.mockReset();
     mockGetCurrentCoordinates.mockReset();
   });
 
-  it('starts the delivery with GPS and opens the address in the external maps app', async () => {
+  it('starts the delivery with GPS without opening maps from the main button', async () => {
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5505, longitude: -46.6333 });
     mockStartDelivery.mockResolvedValueOnce({
       ...deliveryFixture,
@@ -67,12 +67,54 @@ describe('DeliveryDetailsScreen', () => {
       });
     });
 
-    await waitFor(() => {
-      expect(mockOpenDeliveryAddressInMaps).toHaveBeenCalledWith('Rua A, 100 - Centro');
-    });
-
     expect(await screen.findByText('Em rota')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Iniciar entrega' })).not.toBeOnTheScreen();
+    expect(mockOpenDeliveryDirectionsInMaps).not.toHaveBeenCalled();
+  });
+
+  it('starts the delivery and opens directions from the map button using destination coordinates', async () => {
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5505, longitude: -46.6333 });
+    mockStartDelivery.mockResolvedValueOnce({
+      ...deliveryFixture,
+      latitudeDestino: '-24.053378',
+      longitudeDestino: '-52.376477',
+      status: 'EM_ROTA',
+    });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryDetailsScreen route={{ key: 'DeliveryDetails-1', name: 'DeliveryDetails', params: { delivery: deliveryFixture } }} />
+      </AppThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'Iniciar entrega e abrir mapa' }));
+
+    await waitFor(() => {
+      expect(mockOpenDeliveryDirectionsInMaps).toHaveBeenCalledWith({
+        latitude: -24.053378,
+        longitude: -52.376477,
+      });
+    });
+  });
+
+  it('starts the delivery and opens directions using address when destination coordinates are unavailable', async () => {
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5505, longitude: -46.6333 });
+    mockStartDelivery.mockResolvedValueOnce({
+      ...deliveryFixture,
+      status: 'EM_ROTA',
+    });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryDetailsScreen route={{ key: 'DeliveryDetails-1', name: 'DeliveryDetails', params: { delivery: deliveryFixture } }} />
+      </AppThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'Iniciar entrega e abrir mapa' }));
+
+    await waitFor(() => {
+      expect(mockOpenDeliveryDirectionsInMaps).toHaveBeenCalledWith('Rua A, 100 - Centro');
+    });
   });
 
   it('does not start the delivery when the start GPS is unavailable', async () => {
@@ -88,7 +130,7 @@ describe('DeliveryDetailsScreen', () => {
 
     expect(await screen.findByText('Nao foi possivel capturar a localizacao de inicio da entrega.')).toBeOnTheScreen();
     expect(mockStartDelivery).not.toHaveBeenCalled();
-    expect(mockOpenDeliveryAddressInMaps).not.toHaveBeenCalled();
+    expect(mockOpenDeliveryDirectionsInMaps).not.toHaveBeenCalled();
   });
 
   it('renders the delivery cargo details', () => {

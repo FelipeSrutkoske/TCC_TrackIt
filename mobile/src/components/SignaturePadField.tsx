@@ -9,7 +9,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useAppTheme } from '../theme/AppThemeProvider';
 import { PrimaryButton } from './PrimaryButton';
-import { createSignaturePayload, SignaturePoint } from '../utils/signature';
+import { createSignaturePayloadFromStrokes, SignaturePoint } from '../utils/signature';
 
 type SignaturePadFieldProps = {
   label: string;
@@ -52,7 +52,6 @@ export function SignaturePadField({
   const [bounds, setBounds] = useState(DEFAULT_BOUNDS);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<SignaturePoint | null>(null);
-  const allPointsRef = useRef<SignaturePoint[]>([]);
   const strokesRef = useRef<SignaturePoint[][]>([]);
 
   function commitStrokes(nextStrokes: SignaturePoint[][]) {
@@ -117,7 +116,6 @@ export function SignaturePadField({
 
     if (currentStrokes.length === 0) {
       const nextStrokes = [[point]];
-      allPointsRef.current = [...allPointsRef.current, point];
       lastPointRef.current = point;
       commitStrokes(nextStrokes);
       return;
@@ -129,7 +127,6 @@ export function SignaturePadField({
 
     if (!interpolate || !previousPoint) {
       nextStrokes[nextStrokes.length - 1] = [...currentStroke, point];
-      allPointsRef.current = [...allPointsRef.current, point];
       lastPointRef.current = point;
       commitStrokes(nextStrokes);
       return;
@@ -141,7 +138,6 @@ export function SignaturePadField({
 
     if (distance > MAX_INTERPOLATION_DISTANCE) {
       nextStrokes[nextStrokes.length - 1] = [...currentStroke, point];
-      allPointsRef.current = [...allPointsRef.current, point];
       lastPointRef.current = point;
       commitStrokes(nextStrokes);
       return;
@@ -154,7 +150,6 @@ export function SignaturePadField({
     }
 
     nextStrokes[nextStrokes.length - 1] = [...currentStroke, ...interpolatedPoints];
-    allPointsRef.current = [...allPointsRef.current, ...interpolatedPoints];
     lastPointRef.current = point;
     commitStrokes(nextStrokes);
   }
@@ -181,7 +176,7 @@ export function SignaturePadField({
     isDrawingRef.current = false;
     lastPointRef.current = null;
     onDrawEnd?.();
-    onChange(createSignaturePayload(allPointsRef.current, bounds));
+    onChange(createSignaturePayloadFromStrokes(strokesRef.current, bounds));
   }
 
   const hasSignature = strokes.length > 0;
@@ -254,7 +249,6 @@ export function SignaturePadField({
           onPress={() => {
             isDrawingRef.current = false;
             lastPointRef.current = null;
-            allPointsRef.current = [];
             commitStrokes([]);
             onChange(null);
           }}

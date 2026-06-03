@@ -32,8 +32,37 @@ describe('SignaturePadField', () => {
     const payload = decodeSignature(handleChange.mock.calls.at(-1)?.[0] ?? null);
 
     expect(handleChange).toHaveBeenCalled();
+    expect(payload).toMatch(/^sig2:/);
     expect(payload).toContain('10,20');
     expect(payload).toContain('30,40');
+  });
+
+  it('preserves separate strokes in the emitted signature payload', () => {
+    const handleChange = jest.fn();
+
+    render(
+      <AppThemeProvider>
+        <SignaturePadField label="Assinatura" onChange={handleChange} value={null} />
+      </AppThemeProvider>,
+    );
+
+    const pad = screen.getByTestId('signature-pad');
+
+    act(() => {
+      fireEvent(pad, 'touchStart', { nativeEvent: { locationX: 10, locationY: 20 } });
+      fireEvent(pad, 'touchMove', { nativeEvent: { locationX: 30, locationY: 40 } });
+      fireEvent(pad, 'touchEnd');
+      fireEvent(pad, 'touchStart', { nativeEvent: { locationX: 50, locationY: 60 } });
+      fireEvent(pad, 'touchMove', { nativeEvent: { locationX: 70, locationY: 80 } });
+      fireEvent(pad, 'touchEnd');
+    });
+
+    const payload = decodeSignature(handleChange.mock.calls.at(-1)?.[0] ?? null);
+
+    expect(payload).toMatch(/^sig2:/);
+    expect(payload).toContain('|');
+    expect(payload).toContain('10,20');
+    expect(payload).toContain('50,60');
   });
 
   it('does not trigger react render-loop warnings when notifying parent state', () => {

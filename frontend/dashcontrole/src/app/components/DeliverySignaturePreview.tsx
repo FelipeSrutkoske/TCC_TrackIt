@@ -1,32 +1,48 @@
 type ParsedSignature = {
   width: number;
   height: number;
-  points: Array<{ x: number; y: number }>;
+  strokes: Array<Array<{ x: number; y: number }>>;
 };
 
+function parseSignaturePoints(value: string) {
+  if (!value) {
+    return [];
+  }
+
+  return value.split(';').map((pair) => {
+    const [x, y] = pair.split(',').map(Number);
+    return { x, y };
+  });
+}
+
 function parseSignaturePayload(value: string): ParsedSignature | null {
-  const match = value.match(/^sig:(\d+)x(\d+):(.+)$/);
+  const match = value.match(/^sig(2?):(\d+)x(\d+):(.+)$/);
 
   if (!match) {
     return null;
   }
 
-  const width = Number(match[1]);
-  const height = Number(match[2]);
-  const points = match[3].split(';').map((pair) => {
-    const [x, y] = pair.split(',').map(Number);
-    return { x, y };
-  });
+  const isMultiStroke = match[1] === '2';
+  const width = Number(match[2]);
+  const height = Number(match[3]);
+  const strokes = isMultiStroke
+    ? match[4].split('|').map(parseSignaturePoints).filter((stroke) => stroke.length > 0)
+    : [parseSignaturePoints(match[4])];
 
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     return null;
   }
 
-  if (points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+  if (
+    strokes.length === 0 ||
+    strokes.some((stroke) =>
+      stroke.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y)),
+    )
+  ) {
     return null;
   }
 
-  return { width, height, points };
+  return { width, height, strokes };
 }
 
 export function DeliverySignaturePreview({ signatureUrl }: { signatureUrl?: string | null }) {
@@ -50,16 +66,20 @@ export function DeliverySignaturePreview({ signatureUrl }: { signatureUrl?: stri
           aria-label="Assinatura do recebedor"
           className="h-full max-h-full w-full max-w-full"
           role="img"
+          preserveAspectRatio="xMidYMid meet"
           viewBox={`0 0 ${parsedSignature.width} ${parsedSignature.height}`}
         >
-          <polyline
-            fill="none"
-            points={parsedSignature.points.map((point) => `${point.x},${point.y}`).join(' ')}
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="4"
-          />
+          {parsedSignature.strokes.map((stroke, index) => (
+            <polyline
+              fill="none"
+              key={`signature-stroke-${index}`}
+              points={stroke.map((point) => `${point.x},${point.y}`).join(' ')}
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="4"
+            />
+          ))}
         </svg>
       </div>
     );
