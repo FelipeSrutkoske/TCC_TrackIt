@@ -17,19 +17,23 @@ export class CreateFinalizationDto {
   @IsString()
   receiverRelation?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  signatureUrl?: string;
+  signature: string;
 
   @IsOptional()
   @IsString()
   photoUrl?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  latitude?: number;
+  latitude: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  longitude: number;
 
   @IsOptional()
   @IsNumber()
-  longitude?: number;
+  gpsAccuracyMeters?: number | null;
 }

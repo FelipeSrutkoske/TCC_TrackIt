@@ -52,6 +52,7 @@ export class AuthService {
         nome: user.nome,
         email: user.email,
         tipoUsuario: user.tipoUsuario,
+        driverProfileId: (user.driverProfile as { id?: number } | null)?.id,
       },
     };
   }

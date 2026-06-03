@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { DeliveryProofModal } from "../components/DeliveryProofModal";
@@ -23,6 +24,7 @@ const CONFIG_STATUS_ENTREGA: Record<
   EM_ROTA:              { label: "Em Rota",   cor: "bg-blue-100 text-blue-800 border-blue-300",     ponto: "bg-blue-500" },
   ENTREGUE:             { label: "Entregue",  cor: "bg-green-100 text-green-800 border-green-300",  ponto: "bg-green-500" },
   CANCELADO:            { label: "Cancelado", cor: "bg-red-100 text-red-800 border-red-300",        ponto: "bg-red-500" },
+  COM_OCORRENCIA:       { label: "Ocorrência", cor: "bg-orange-100 text-orange-800 border-orange-300", ponto: "bg-orange-500" },
 };
 
 
@@ -54,13 +56,16 @@ export default function EntregasPage() {
     }
   }, []);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
+  useEffect(() => {
+    void Promise.resolve().then(carregarDados);
+  }, [carregarDados]);
 
   const entregasFiltradas = entregas.filter((e) => {
     const texto = filtro.toLowerCase();
     return (
       e.destinationAddress.toLowerCase().includes(texto) ||
       e.status.toLowerCase().includes(texto) ||
+      (e.occurrences?.length ? "ocorrencia registrada".includes(texto) : false) ||
       String(e.id).includes(texto)
     );
   });
@@ -91,7 +96,18 @@ export default function EntregasPage() {
 
   return (
     <>
-      <Header title="Gerenciamento de Entregas" breadcrumb={["Home", "Entregas"]} />
+      <Header
+        title="Gerenciamento de Entregas"
+        breadcrumb={["Home", "Entregas"]}
+        actions={(
+          <Link
+            className="rounded-xl bg-[#4f654b] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#40543d]"
+            href="/entregas/criarEntrega"
+          >
+            Criar entrega
+          </Link>
+        )}
+      />
       <div className="page-body">
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
         
@@ -132,6 +148,11 @@ export default function EntregasPage() {
                   </span>
                 </div>
                 <p className="text-sm text-[#1f2320] font-medium mb-4 line-clamp-2">{entrega.destinationAddress}</p>
+                {entrega.occurrences?.length ? (
+                  <span className="mb-3 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                    Ocorrencia registrada
+                  </span>
+                ) : null}
                 <div className="pt-3 border-t border-[#e3e8e3] flex justify-between items-center">
                    <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
                    <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
@@ -161,12 +182,13 @@ export default function EntregasPage() {
                   <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">🏍 Motorista Designado</p>
                   <p className="text-white text-sm">{getNomeMotorista(entregaSelecionada) || "Nenhum"}</p>
                </div>
-               <button 
+                <button 
+                  disabled={salvando}
                   onClick={() => setModalMotoristasAberto(true)}
-                  className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold"
-               >
-                 {getNomeMotorista(entregaSelecionada) ? "Trocar" : "Vincular"}
-               </button>
+                  className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-60"
+                >
+                 {salvando ? "Salvando..." : getNomeMotorista(entregaSelecionada) ? "Trocar" : "Vincular"}
+                </button>
             </div>
             <button
               onClick={() => setModalComprovanteAberto(true)}
@@ -205,7 +227,12 @@ export default function EntregasPage() {
           deliveryId={entregaSelecionada.id}
           destinationAddress={entregaSelecionada.destinationAddress}
           driverName={getNomeMotorista(entregaSelecionada) || undefined}
-          finalization={null}
+          finalization={entregaSelecionada.finalization ?? null}
+          latitudeInicio={entregaSelecionada.latitudeInicio ?? null}
+          longitudeInicio={entregaSelecionada.longitudeInicio ?? null}
+          dataHoraInicio={entregaSelecionada.dataHoraInicio ?? null}
+          detalhesEntrega={entregaSelecionada.details ?? []}
+          ocorrencias={entregaSelecionada.occurrences ?? []}
         />
       )}
     </>

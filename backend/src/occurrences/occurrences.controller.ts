@@ -12,6 +12,9 @@ import { OccurrencesService } from './occurrences.service';
 import { CreateOccurrenceDto } from './dto/create-occurrence.dto';
 import { Occurrence } from './entities/occurrence.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MobileDriverGuard } from '../auth/mobile-driver.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @UseGuards(JwtAuthGuard)
 @Controller('occurrences')
@@ -19,8 +22,12 @@ export class OccurrencesController {
   constructor(private readonly occurrencesService: OccurrencesService) {}
 
   @Post()
-  create(@Body() body: CreateOccurrenceDto) {
-    return this.occurrencesService.create(body);
+  @UseGuards(MobileDriverGuard)
+  create(
+    @Body() body: CreateOccurrenceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.occurrencesService.createForUser(user.id, body);
   }
 
   @Get()

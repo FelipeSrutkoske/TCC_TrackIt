@@ -1,0 +1,53 @@
+appId: host.exp.Exponent
+---
+- launchApp
+- assertVisible: "Acesse sua conta"
+- tapOn: "E-mail"
+- inputText: "motorista@test.com"
+- tapOn: "Senha"
+- inputText: "123456"
+- tapOn: "Entrar"
+- assertVisible: "Painel do motorista"
+- tapOn: "Ver entregas atuais"
+- assertVisible: "Entregas atuais"
+- assertVisible: "Rua A"
+- tapOn:
+    text: "Detalhes"
+    index: 1
+- assertVisible: "Rua A"
+- tapOn: "Iniciar entrega"
+- launchApp
+- assertVisible: "Finalizar entrega"
+- tapOn: "Finalizar entrega"
+- assertVisible: "Baixa da entrega #1"
+- tapOn:
+    id: "receiver-name-input"
+- inputText: "Maria"
+- tapOn:
+    id: "signature-pad"
+- tapOn: "Finalizar entrega"
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "Allow only while using the app"
+    optional: true
+- tapOn:
+    text: "While using the app"
+    optional: true
+- tapOn:
+    text: "Permitir"
+    optional: true
+- tapOn:
+    text: "Permitir apenas durante o uso do app"
+    optional: true
+- tapOn:
+    text: "Durante o uso do app"
+    optional: true
+- tapOn:
+    text: "Ao usar o app"
+    optional: true
+- assertVisible: "Historico operacional"
+- assertVisible: "Entrega #1"
+- assertVisible: "Rua A"
+- assertVisible: "Entregue"

@@ -44,8 +44,10 @@ export function Header({
   const [userName, setUserName] = useState("Carregando...");
 
   useEffect(() => {
-    const user = authService.getUser();
-    setUserName(user?.nome || "Visitante");
+    void Promise.resolve().then(() => {
+      const user = authService.getUser();
+      setUserName(user?.nome || "Visitante");
+    });
   }, []);
 
   // Gera as iniciais do usuário para o avatar fallback (ex: "João Silva" → "JS")

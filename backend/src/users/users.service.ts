@@ -33,9 +33,19 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.driverProfile', 'driverProfile')
       .where('user.email = :email', { email })
       .addSelect('user.senha') // força seleção da senha (select: false na entity)
       .getOne();
+  }
+
+  async resolveDriverProfileId(userId: number): Promise<number | null> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['driverProfile'],
+    });
+
+    return (user?.driverProfile as { id?: number } | null)?.id ?? null;
   }
 
   async update(

@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { TipoOcorrencia } from '../entities/occurrence.entity';
 
@@ -12,15 +13,28 @@ export class CreateOccurrenceDto {
   @IsNumber()
   entregaId: number;
 
-  @IsOptional()
-  @IsNumber()
-  motoristaId?: number;
-
   @IsNotEmpty()
   @IsEnum(TipoOcorrencia)
-  tipo: TipoOcorrencia;
+  tipoOcorrencia: TipoOcorrencia;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(1000)
+  descricao: string;
 
   @IsOptional()
   @IsString()
-  descricao?: string;
+  fotoProva?: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  latitude: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  longitude: number;
+
+  @IsOptional()
+  @IsNumber()
+  gpsAccuracyMeters?: number;
 }

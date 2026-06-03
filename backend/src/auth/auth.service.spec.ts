@@ -102,5 +102,38 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
     });
+
+    it('deve incluir driverProfileId na resposta quando o usuario motorista tiver perfil vinculado', async () => {
+      const mockUser = {
+        id: 7,
+        email: 'motorista@test.com',
+        senha: '$2b$10$mockhash',
+        nome: 'Motorista Test',
+        tipoUsuario: TipoUsuario.MOTORISTA,
+        ativo: true,
+        driverProfile: {
+          id: 99,
+        },
+      };
+
+      jest
+        .spyOn(usersService, 'findByEmail')
+        .mockResolvedValue(mockUser as any);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      jest.spyOn(jwtService, 'sign').mockReturnValue('mock-jwt-token');
+
+      const result = await service.login('motorista@test.com', '123');
+
+      expect(result).toEqual({
+        access_token: 'mock-jwt-token',
+        user: {
+          id: 7,
+          nome: 'Motorista Test',
+          email: 'motorista@test.com',
+          tipoUsuario: TipoUsuario.MOTORISTA,
+          driverProfileId: 99,
+        },
+      });
+    });
   });
 });
