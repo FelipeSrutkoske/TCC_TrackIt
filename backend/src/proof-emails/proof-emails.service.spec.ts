@@ -1,9 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import nodemailer from 'nodemailer';
+import { inflateSync } from 'zlib';
 import { DeliveryProofEmail, ProofEmailStatus } from './entities/delivery-proof-email.entity';
 import { DeliveryProofEmailsService } from './proof-emails.service';
 import { DeliveriesService } from '../deliveries/deliveries.service';
+
+function readPngPixel(buffer: Buffer, x: number, y: number, width: number): [number, number, number, number] {
+  let offset = 8;
+  const idatChunks: Buffer[] = [];
+
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.subarray(offset + 4, offset + 8).toString('ascii');
+    const data = buffer.subarray(offset + 8, offset + 8 + length);
+
+    if (type === 'IDAT') {
+      idatChunks.push(data);
+    }
+
+    offset += 12 + length;
+  }
+
+  const scanlines = inflateSync(Buffer.concat(idatChunks));
+  const pixelOffset = y * (width * 4 + 1) + 1 + x * 4;
+  return [
+    scanlines[pixelOffset],
+    scanlines[pixelOffset + 1],
+    scanlines[pixelOffset + 2],
+    scanlines[pixelOffset + 3],
+  ];
+}
 
 jest.mock('nodemailer', () => ({
   __esModule: true,
@@ -140,5 +167,32 @@ describe('DeliveryProofEmailsService', () => {
     expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('google-secret-key');
 
     global.fetch = originalFetch;
+  });
+
+  it('deve preservar tracos separados da assinatura sig2 no PNG do email', async () => {
+    process.env.PROOF_EMAIL_ENABLED = 'true';
+    process.env.PROOF_EMAIL_MAP_MODE = 'none';
+    mockDeliveriesService.findOne.mockResolvedValue({
+      id: 22,
+      destinationAddress: 'Rua Teste, 123',
+      company: { contactEmail: 'cliente@empresa.com' },
+      occurrences: [],
+      finalization: {
+        receiverName: 'Maria Cliente',
+        signatureUrl: 'sig2:100x60:10,10;20,10|80,10;90,10',
+      },
+    });
+
+    await service.sendDeliveryProof(22);
+
+    const message = mockSendMail.mock.calls[0][0];
+    const signatureAttachment = message.attachments.find(
+      (attachment: { cid: string }) => attachment.cid === 'delivery-signature-22',
+    );
+
+    expect(signatureAttachment).toBeDefined();
+    expect(readPngPixel(signatureAttachment.content, 15, 10, 100)).toEqual([17, 24, 39, 255]);
+    expect(readPngPixel(signatureAttachment.content, 85, 10, 100)).toEqual([17, 24, 39, 255]);
+    expect(readPngPixel(signatureAttachment.content, 50, 10, 100)).toEqual([255, 255, 255, 255]);
   });
 });

@@ -14,6 +14,10 @@ Dev.MD
 !.yarn/releases
 !.yarn/versions
 
+#PROJECT_FUNCIONALITIES
+PROJECT_FUNCTIONALITIES.md
+PROOF_EMAIL_FUNCTIONALITY.md
+
 # testing
 **/coverage
 **/test-results

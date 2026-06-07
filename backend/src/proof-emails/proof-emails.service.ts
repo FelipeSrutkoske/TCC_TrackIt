@@ -345,20 +345,30 @@ export class DeliveryProofEmailsService {
       html: `<img src="cid:${cid}" alt="Assinatura digital" style="display:block;margin:0 auto;max-width:100%;height:auto;background:#ffffff;" />`,
       attachment: {
         cid,
-        content: this.createSignaturePng(parsed.width, parsed.height, parsed.points),
+        content: this.createSignaturePng(parsed.width, parsed.height, parsed.strokes),
         contentType: 'image/png',
         filename: `assinatura-entrega-${deliveryId}.png`,
       },
     };
   }
 
-  private parseSig2(signature: string): { width: number; height: number; points: Array<[number, number]> } | null {
-    const match = signature.match(/^sig2?:(\d+)x(\d+):(.+)$/);
+  private parseSig2(signature: string): { width: number; height: number; strokes: Array<Array<[number, number]>> } | null {
+    const match = signature.match(/^sig(2?):(\d+)x(\d+):(.+)$/);
     if (!match) return null;
 
-    const width = Number(match[1]);
-    const height = Number(match[2]);
-    const points = match[3]
+    const isMultiStroke = match[1] === '2';
+    const width = Number(match[2]);
+    const height = Number(match[3]);
+    const strokes = (isMultiStroke ? match[4].split('|') : [match[4]])
+      .map((stroke) => this.parseSignatureStroke(stroke))
+      .filter((stroke) => stroke.length > 0);
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || !strokes.length) return null;
+    return { width, height, strokes };
+  }
+
+  private parseSignatureStroke(stroke: string): Array<[number, number]> {
+    return stroke
       .split(';')
       .map((point) => point.trim())
       .filter(Boolean)
@@ -367,16 +377,15 @@ export class DeliveryProofEmailsService {
         return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
       })
       .filter((point): point is [number, number] => Boolean(point));
-
-    if (!Number.isFinite(width) || !Number.isFinite(height) || !points.length) return null;
-    return { width, height, points };
   }
 
-  private createSignaturePng(width: number, height: number, points: Array<[number, number]>): Buffer {
+  private createSignaturePng(width: number, height: number, strokes: Array<Array<[number, number]>>): Buffer {
     const rgba = Buffer.alloc(width * height * 4, 255);
 
-    for (let i = 1; i < points.length; i += 1) {
-      this.drawLine(rgba, width, height, points[i - 1], points[i]);
+    for (const points of strokes) {
+      for (let i = 1; i < points.length; i += 1) {
+        this.drawLine(rgba, width, height, points[i - 1], points[i]);
+      }
     }
 
     const scanlines = Buffer.alloc((width * 4 + 1) * height);
