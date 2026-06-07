@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Occurrence, TipoOcorrencia } from './entities/occurrence.entity';
 import { CreateOccurrenceDto } from './dto/create-occurrence.dto';
+import { OccurrenceQueryDto } from './dto/occurrence-query.dto';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
 
@@ -20,6 +21,34 @@ const tiposOcorrenciaComFotoObrigatoria = new Set<TipoOcorrencia>([
   TipoOcorrencia.AREA_INSEGURA,
   TipoOcorrencia.GPS_INCOMPATIVEL,
 ]);
+
+const OCCURRENCE_LABELS: Record<TipoOcorrencia, string> = {
+  [TipoOcorrencia.DESTINATARIO_AUSENTE]: 'Destinatario ausente',
+  [TipoOcorrencia.ENDERECO_NAO_ENCONTRADO]: 'Endereco nao encontrado',
+  [TipoOcorrencia.VEICULO_AVARIADO]: 'Veiculo avariado',
+  [TipoOcorrencia.CARGA_AVARIADA]: 'Carga avariada',
+  [TipoOcorrencia.ACIDENTE]: 'Acidente',
+  [TipoOcorrencia.AREA_INSEGURA]: 'Area insegura',
+  [TipoOcorrencia.GPS_INCOMPATIVEL]: 'GPS incompativel',
+  [TipoOcorrencia.OUTROS]: 'Outros',
+};
+
+interface OccurrenceSummaryItem {
+  type: TipoOcorrencia;
+  label: string;
+  value: number;
+}
+
+export interface OccurrencesWithSummaryResponse {
+  items: Occurrence[];
+  summary: {
+    total: number;
+    mostCommonType: TipoOcorrencia | null;
+    withPhoto: number;
+    withGps: number;
+    byType: OccurrenceSummaryItem[];
+  };
+}
 
 @Injectable()
 export class OccurrencesService {
@@ -98,6 +127,43 @@ export class OccurrencesService {
     });
   }
 
+  async findAllWithSummary(
+    query: OccurrenceQueryDto = {},
+  ): Promise<OccurrencesWithSummaryResponse> {
+    const occurrences = await this.occurrencesRepository.find({
+      relations: [
+        'delivery',
+        'delivery.company',
+        'delivery.driver',
+        'delivery.driver.user',
+        'delivery.finalization',
+      ],
+      order: { dataHora: 'DESC' },
+    });
+    const filtered = occurrences.filter((occurrence) =>
+      this.matchesFilters(occurrence, query),
+    );
+    const byType = this.groupByType(filtered);
+
+    return {
+      items: filtered,
+      summary: {
+        total: filtered.length,
+        mostCommonType: byType[0]?.type ?? null,
+        withPhoto: filtered.filter((occurrence) => Boolean(occurrence.fotoProvaUrl))
+          .length,
+        withGps: filtered.filter(
+          (occurrence) =>
+            occurrence.latitude !== null &&
+            occurrence.latitude !== undefined &&
+            occurrence.longitude !== null &&
+            occurrence.longitude !== undefined,
+        ).length,
+        byType,
+      },
+    };
+  }
+
   async findOne(id: number): Promise<Occurrence> {
     const occurrence = await this.occurrencesRepository.findOne({
       where: { id },
@@ -117,5 +183,66 @@ export class OccurrencesService {
   async remove(id: number): Promise<void> {
     const occurrence = await this.findOne(id);
     await this.occurrencesRepository.remove(occurrence);
+  }
+
+  private matchesFilters(
+    occurrence: Occurrence,
+    query: OccurrenceQueryDto,
+  ): boolean {
+    const dataHora = this.toDate(occurrence.dataHora);
+    const startDate = this.toDate(query.startDate);
+    const endDate = this.toDate(query.endDate);
+    const companyId = this.toNumber(query.companyId);
+    const driverId = this.toNumber(query.driverId);
+    const deliveryId = this.toNumber(query.deliveryId);
+
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
+    if (startDate && dataHora && dataHora < startDate) return false;
+    if (endDate && dataHora && dataHora > endDate) return false;
+    if (query.tipoOcorrencia && occurrence.tipoOcorrencia !== query.tipoOcorrencia) {
+      return false;
+    }
+    if (companyId !== null && occurrence.delivery?.companyId !== companyId) {
+      return false;
+    }
+    if (driverId !== null && occurrence.delivery?.driverId !== driverId) return false;
+    if (deliveryId !== null && occurrence.deliveryId !== deliveryId) return false;
+    if (query.status && occurrence.delivery?.status !== query.status) return false;
+
+    return true;
+  }
+
+  private groupByType(occurrences: Occurrence[]): OccurrenceSummaryItem[] {
+    const grouped = new Map<TipoOcorrencia, number>();
+
+    occurrences.forEach((occurrence) => {
+      grouped.set(
+        occurrence.tipoOcorrencia,
+        (grouped.get(occurrence.tipoOcorrencia) ?? 0) + 1,
+      );
+    });
+
+    return Array.from(grouped.entries())
+      .map(([type, value]) => ({
+        type,
+        label: OCCURRENCE_LABELS[type],
+        value,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  private toDate(value?: string | Date | null): Date | null {
+    if (!value) return null;
+    const date = value instanceof Date ? new Date(value) : new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toNumber(value?: string): number | null {
+    if (!value) return null;
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? parsed : null;
   }
 }

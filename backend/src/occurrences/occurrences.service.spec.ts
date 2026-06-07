@@ -183,4 +183,57 @@ describe('OccurrencesService', () => {
     });
     expect(result).toHaveLength(1);
   });
+
+  it('deve filtrar ocorrencias e retornar resumo operacional', async () => {
+    mockRepository.find.mockResolvedValue([
+      {
+        id: 1,
+        deliveryId: 9,
+        tipoOcorrencia: TipoOcorrencia.GPS_INCOMPATIVEL,
+        fotoProvaUrl: 'data:image/jpeg;base64,abc',
+        latitude: -23.55,
+        longitude: -46.63,
+        dataHora: new Date('2026-06-02T10:00:00.000Z'),
+        delivery: {
+          id: 9,
+          companyId: 2,
+          driverId: 14,
+          status: StatusEntrega.COM_OCORRENCIA,
+        },
+      },
+      {
+        id: 2,
+        deliveryId: 10,
+        tipoOcorrencia: TipoOcorrencia.OUTROS,
+        dataHora: new Date('2026-06-03T10:00:00.000Z'),
+        delivery: { id: 10, companyId: 3, driverId: 15, status: StatusEntrega.EM_ROTA },
+      },
+    ]);
+
+    const result = await (service as any).findAllWithSummary({
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      companyId: '2',
+      tipoOcorrencia: TipoOcorrencia.GPS_INCOMPATIVEL,
+    });
+
+    expect(mockRepository.find).toHaveBeenCalledWith({
+      relations: [
+        'delivery',
+        'delivery.company',
+        'delivery.driver',
+        'delivery.driver.user',
+        'delivery.finalization',
+      ],
+      order: { dataHora: 'DESC' },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.summary).toEqual({
+      total: 1,
+      mostCommonType: 'GPS_INCOMPATIVEL',
+      withPhoto: 1,
+      withGps: 1,
+      byType: [{ type: 'GPS_INCOMPATIVEL', label: 'GPS incompativel', value: 1 }],
+    });
+  });
 });

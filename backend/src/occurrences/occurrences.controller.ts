@@ -7,9 +7,11 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { OccurrencesService } from './occurrences.service';
 import { CreateOccurrenceDto } from './dto/create-occurrence.dto';
+import { OccurrenceQueryDto } from './dto/occurrence-query.dto';
 import { Occurrence } from './entities/occurrence.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../auth/mobile-driver.guard';
@@ -31,8 +33,8 @@ export class OccurrencesController {
   }
 
   @Get()
-  findAll() {
-    return this.occurrencesService.findAll();
+  findAll(@Query() query: OccurrenceQueryDto) {
+    return this.occurrencesService.findAllWithSummary(query);
   }
 
   @Get(':id')

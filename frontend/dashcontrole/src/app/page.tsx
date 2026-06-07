@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { deliveriesService, DeliveryStats } from "@/services/deliveries.service";
@@ -120,7 +121,7 @@ export default function Home() {
 
         {/* Atalhos */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a href="/entregas" className="rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all group">
+          <Link href="/entregas" className="rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all group">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-9 h-9 rounded-xl bg-[#4d6a2f]/10 flex items-center justify-center">
                 <svg className="w-5 h-5 text-[#4d6a2f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
@@ -128,8 +129,8 @@ export default function Home() {
               <p className="font-bold text-[#1f2320] group-hover:text-[#4d6a2f] transition-colors">Gerenciar Entregas</p>
             </div>
             <p className="text-sm text-[#748071]">Visualize, filtre e vincule motoristas às entregas pendentes.</p>
-          </a>
-          <a href="/dashboard" className="rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all group">
+          </Link>
+          <Link href="/dashboard" className="rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all group">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-9 h-9 rounded-xl bg-[#2563eb]/10 flex items-center justify-center">
                 <svg className="w-5 h-5 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -137,7 +138,7 @@ export default function Home() {
               <p className="font-bold text-[#1f2320] group-hover:text-[#2563eb] transition-colors">Ver Dashboard Completo</p>
             </div>
             <p className="text-sm text-[#748071]">Gráficos detalhados com análise de performance da operação.</p>
-          </a>
+          </Link>
         </section>
 
         </div>

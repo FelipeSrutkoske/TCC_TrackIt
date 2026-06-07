@@ -64,6 +64,14 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
+!**/.env.example
+!.env.local.example
+!**/.env.local.example
+.env.example
+
+#SKILL
+TRACKIT_SKILL.md
 
 # Assistant & Documentation
 APP.md

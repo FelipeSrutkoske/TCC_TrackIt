@@ -12,6 +12,7 @@ import { CreateFinalizationDto } from './dto/create-finalization.dto';
 import { UpdateFinalizationDto } from './dto/update-finalization.dto';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
+import { DeliveryProofEmailsService } from '../proof-emails/proof-emails.service';
 
 const DISTANCIA_MAXIMA_DESTINO_METROS = 200;
 const GPS_ACCURACY_MAXIMA_METROS = 100;
@@ -27,6 +28,7 @@ export class FinalizationsService {
     private readonly finalizationsRepository: Repository<Finalization>,
     private readonly deliveriesService: DeliveriesService,
     private readonly dataSource: DataSource,
+    private readonly proofEmailsService: DeliveryProofEmailsService,
   ) {}
 
   create(data: CreateFinalizationDto): Promise<Finalization> {
@@ -61,7 +63,7 @@ export class FinalizationsService {
       `Finalization payload validated deliveryId=${data.deliveryId} photoLength=${data.photoUrl?.length ?? 0} photoInline=${data.photoUrl?.startsWith('data:image/') ?? false} signatureLength=${data.signature?.length ?? 0} gpsValidado=${validation.gpsValidado} gpsDivergente=${validation.gpsDivergente}`,
     );
 
-    return this.dataSource.transaction(async (entityManager) => {
+    const finalization = await this.dataSource.transaction(async (entityManager) => {
       const finalizationRepository = entityManager.getRepository(Finalization);
       const finalization = await finalizationRepository.save(
         finalizationRepository.create(
@@ -85,6 +87,9 @@ export class FinalizationsService {
 
       return finalization;
     });
+
+    await this.trySendProofEmail(data.deliveryId);
+    return finalization;
   }
 
   findAll(): Promise<Finalization[]> {
@@ -206,5 +211,15 @@ export class FinalizationsService {
 
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  private async trySendProofEmail(deliveryId: number): Promise<void> {
+    try {
+      await this.proofEmailsService.sendDeliveryProof(deliveryId);
+    } catch (error) {
+      this.logger.warn(
+        `Finalizacao mantida mesmo com falha no envio de comprovante deliveryId=${deliveryId}: ${error instanceof Error ? error.message : 'erro desconhecido'}`,
+      );
+    }
   }
 }

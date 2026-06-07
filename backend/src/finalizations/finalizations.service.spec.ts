@@ -6,12 +6,14 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
 import { DataSource } from 'typeorm';
+import { DeliveryProofEmailsService } from '../proof-emails/proof-emails.service';
 
 describe('FinalizationsService', () => {
   let service: FinalizationsService;
   let mockRepository: any;
   let mockDeliveriesService: any;
   let mockDataSource: any;
+  let mockProofEmailsService: any;
 
   beforeEach(async () => {
     mockRepository = {
@@ -33,6 +35,10 @@ describe('FinalizationsService', () => {
       transaction: jest.fn(),
     };
 
+    mockProofEmailsService = {
+      sendDeliveryProof: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FinalizationsService,
@@ -47,6 +53,10 @@ describe('FinalizationsService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: DeliveryProofEmailsService,
+          useValue: mockProofEmailsService,
         },
       ],
     }).compile();
@@ -83,16 +93,18 @@ describe('FinalizationsService', () => {
     const result = await service.createForUser(77, dto as any);
 
     expect(mockDeliveriesService.findOwnedByUser).toHaveBeenCalledWith(77, 1);
-    expect(mockRepository.create).toHaveBeenCalledWith({
-      deliveryId: 1,
-      receiverName: 'João',
-      receiverDocument: '',
-      receiverRelation: '',
-      signatureUrl: 'assinatura-base64',
-      photoUrl: '',
-      latitude: -23.5,
-      longitude: -46.6,
-    });
+    expect(mockRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: 1,
+        receiverName: 'João',
+        receiverDocument: '',
+        receiverRelation: '',
+        signatureUrl: 'assinatura-base64',
+        photoUrl: '',
+        latitude: -23.5,
+        longitude: -46.6,
+      }),
+    );
     expect(mockRepository.save).toHaveBeenCalled();
     expect(mockDeliveriesService.updateStatus).toHaveBeenCalledWith(
       1,
@@ -172,6 +184,36 @@ describe('FinalizationsService', () => {
       StatusEntrega.ENTREGUE,
       transactionManager,
     );
+  });
+
+  it('deve tentar enviar comprovante apos finalizar sem desfazer a finalizacao se falhar', async () => {
+    mockDataSource.transaction.mockImplementation(async (callback: any) =>
+      callback({
+        getRepository: jest.fn().mockReturnValue({
+          create: mockRepository.create,
+          save: mockRepository.save,
+        }),
+      }),
+    );
+    mockDeliveriesService.findOwnedByUser.mockResolvedValue({
+      id: 1,
+      driverId: 14,
+      status: StatusEntrega.EM_ROTA,
+    });
+    mockProofEmailsService.sendDeliveryProof.mockRejectedValue(
+      new Error('SMTP indisponivel'),
+    );
+
+    const result = await service.createForUser(77, {
+      deliveryId: 1,
+      receiverName: 'João',
+      signature: 'assinatura-base64',
+      latitude: -23.5,
+      longitude: -46.6,
+    } as any);
+
+    expect(mockProofEmailsService.sendDeliveryProof).toHaveBeenCalledWith(1);
+    expect(result).toHaveProperty('id', 1);
   });
 
   it('deve impedir finalização fora do status em rota', async () => {

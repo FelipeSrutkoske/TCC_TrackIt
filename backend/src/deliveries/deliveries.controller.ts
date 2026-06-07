@@ -7,11 +7,13 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { DeliveriesService } from './deliveries.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { StartDeliveryDto } from './dto/start-delivery.dto';
+import { DeliveryAnalyticsQueryDto } from './dto/delivery-analytics-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../auth/mobile-driver.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -35,6 +37,16 @@ export class DeliveriesController {
   @Get('stats')
   getStats() {
     return this.deliveriesService.getStats();
+  }
+
+  @Get('analytics')
+  getAnalytics(@Query() query: DeliveryAnalyticsQueryDto) {
+    return this.deliveriesService.getAnalytics(query);
+  }
+
+  @Get('alerts')
+  getAlerts() {
+    return this.deliveriesService.getAlerts();
   }
 
   @Get('me')

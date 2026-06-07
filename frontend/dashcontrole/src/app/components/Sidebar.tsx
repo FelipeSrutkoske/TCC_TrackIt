@@ -58,6 +58,34 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    href: "/ocorrencias",
+    label: "Ocorrências",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M9.401 3.003c1.155-2.001 4.043-2.001 5.198 0l7.355 12.745c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.753-2.5-2.599-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
+    href: "/empresas",
+    label: "Empresas",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M3 3.75A.75.75 0 013.75 3h16.5a.75.75 0 01.75.75v16.5a.75.75 0 01-.75.75h-16.5A.75.75 0 013 20.25V3.75zm3 3A.75.75 0 016.75 6h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 016 6.75zm0 4A.75.75 0 016.75 10h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 016 10.75zm.75 3.25a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5zM13.5 6.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75zm.75 3.25a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3zm-.75 4.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
+    href: "/alertas",
+    label: "Alertas",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path d="M10.5 6a1.5 1.5 0 113 0v5.25a1.5 1.5 0 01-3 0V6z" />
+        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75S6.615 21.75 12 21.75s9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 15a1.125 1.125 0 100 2.25A1.125 1.125 0 0012 15z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
     href: "/sobre",
     label: "Sobre",
     icon: (

@@ -136,28 +136,39 @@ export default function EntregasPage() {
             const cfg = CONFIG_STATUS_ENTREGA[entrega.status];
             const nomeMotorista = getNomeMotorista(entrega);
             return (
-              <button
+              <article
                 key={entrega.id}
-                onClick={() => setEntregaSelecionada(entrega)}
                 className="text-left w-full rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-bold text-[#8a9488]">ENTREGA #{entrega.id}</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${cfg.cor}`}>
-                    {cfg.label}
-                  </span>
-                </div>
-                <p className="text-sm text-[#1f2320] font-medium mb-4 line-clamp-2">{entrega.destinationAddress}</p>
-                {entrega.occurrences?.length ? (
-                  <span className="mb-3 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
-                    Ocorrencia registrada
-                  </span>
-                ) : null}
-                <div className="pt-3 border-t border-[#e3e8e3] flex justify-between items-center">
-                   <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
-                   <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
-                </div>
-              </button>
+                <button
+                  className="w-full text-left"
+                  onClick={() => setEntregaSelecionada(entrega)}
+                  type="button"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-xs font-bold text-[#8a9488]">ENTREGA #{entrega.id}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${cfg.cor}`}>
+                      {cfg.label}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#1f2320] font-medium mb-4 line-clamp-2">{entrega.destinationAddress}</p>
+                  {entrega.occurrences?.length ? (
+                    <span className="mb-3 inline-flex rounded-full border border-orange-300 bg-orange-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                      Ocorrencia registrada
+                    </span>
+                  ) : null}
+                  <div className="pt-3 border-t border-[#e3e8e3] flex justify-between items-center">
+                     <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
+                     <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
+                  </div>
+                </button>
+                <Link
+                  className="mt-3 inline-flex rounded-lg border border-[#4f654b]/30 px-3 py-1.5 text-xs font-bold text-[#4f654b] hover:bg-[#e7ece7]"
+                  href={`/entregas/${entrega.id}`}
+                >
+                  Abrir pagina completa
+                </Link>
+              </article>
             );
           })}
         </div>

@@ -98,6 +98,13 @@ export interface Entrega {
     user: { id: number; nome: string };
     placaVeiculo?: string;
   } | null;
+  company?: {
+    id: number;
+    corporateName: string;
+    tradeName?: string | null;
+    contactEmail?: string | null;
+    subscriptionStatus?: string;
+  } | null;
   details?: DeliveryDetail[];
   occurrences?: DeliveryOccurrence[];
   finalization?: DeliveryFinalization | null;
@@ -111,6 +118,83 @@ export interface DeliveryStats {
   cancelados: number;
 }
 
+export interface DeliveryAnalyticsQuery {
+  startDate?: string;
+  endDate?: string;
+  companyId?: string;
+  driverId?: string;
+  status?: StatusEntrega | '';
+}
+
+export interface DeliveryAnalyticsResponse {
+  filters: {
+    startDate: string;
+    endDate: string;
+    companyId: number | null;
+    driverId: number | null;
+    status: StatusEntrega | null;
+  };
+  kpis: {
+    totalDeliveries: number;
+    completionRate: number;
+    occurrenceRate: number;
+    gpsDivergenceRate: number;
+    averageDeliveryTimeMinutes: number;
+    onTimeRate: number;
+    averageDelayMinutes: number;
+    proofCompletenessRate: number;
+  };
+  charts: {
+    statusDistribution: Array<{ status: StatusEntrega; label: string; value: number }>;
+    deliveriesByDay: Array<{ date: string; created: number; finalized: number; withOccurrence: number }>;
+    occurrencesByType: Array<{ type: string; label: string; value: number }>;
+    driverRanking: Array<{
+      driverId: number | null;
+      driverName: string;
+      deliveries: number;
+      completed: number;
+      occurrences: number;
+      averageDeliveryTimeMinutes: number;
+      successRate: number;
+    }>;
+    weekdayHeatmap: Array<{ weekday: number; label: string; value: number }>;
+    slaBuckets: Array<{ label: string; value: number }>;
+    gpsDistanceBuckets: Array<{ label: string; value: number }>;
+    operationalFunnel: Array<{ label: string; value: number }>;
+    alertsSummary: Array<{
+      type: string;
+      label: string;
+      severity: 'info' | 'warning' | 'critical';
+      total: number;
+    }>;
+  };
+}
+
+export interface DeliveryOperationalAlert {
+  id: string;
+  type:
+    | 'ENTREGA_EM_ROTA_LONGA'
+    | 'ENTREGA_ATRASADA'
+    | 'GPS_DIVERGENTE'
+    | 'OCORRENCIA_CRITICA'
+    | 'OCORRENCIA_ABERTA'
+    | 'COMPROVANTE_INCOMPLETO';
+  severity: 'info' | 'warning' | 'critical';
+  deliveryId: number;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface DeliveryProofEmailHistoryItem {
+  id: number;
+  deliveryId: number;
+  emailDestino: string | null;
+  status: 'ENVIADO' | 'FALHOU' | 'SEM_DESTINATARIO';
+  erro?: string | null;
+  dataEnvio?: string | null;
+}
+
 export const deliveriesService = {
   getAll(): Promise<Entrega[]> {
     return apiFetch<Entrega[]>('/deliveries');
@@ -122,6 +206,36 @@ export const deliveriesService = {
 
   getStats(): Promise<DeliveryStats> {
     return apiFetch<DeliveryStats>('/deliveries/stats');
+  },
+
+  getAnalytics(query: DeliveryAnalyticsQuery = {}): Promise<DeliveryAnalyticsResponse> {
+    const params = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+
+    const search = params.toString();
+    return apiFetch<DeliveryAnalyticsResponse>(
+      `/deliveries/analytics${search ? `?${search}` : ''}`,
+    );
+  },
+
+  getAlerts(): Promise<DeliveryOperationalAlert[]> {
+    return apiFetch<DeliveryOperationalAlert[]>('/deliveries/alerts');
+  },
+
+  getProofEmails(id: number): Promise<DeliveryProofEmailHistoryItem[]> {
+    return apiFetch<DeliveryProofEmailHistoryItem[]>(`/deliveries/${id}/proof-emails`);
+  },
+
+  sendProofEmail(id: number, email?: string): Promise<DeliveryProofEmailHistoryItem> {
+    return apiFetch<DeliveryProofEmailHistoryItem>(`/deliveries/${id}/proof-emails`, {
+      method: 'POST',
+      body: JSON.stringify(email ? { email } : {}),
+    });
   },
 
   create(data: CreateDeliveryInput): Promise<Entrega> {

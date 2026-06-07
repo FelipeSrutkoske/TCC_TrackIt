@@ -120,6 +120,7 @@ describe('DeliveriesService', () => {
       const result = await service.create(dto as any);
 
       expect(mockRepository.create).toHaveBeenCalledWith({
+        companyId: 1,
         destinationAddress: 'Rua A',
         driverId: 4,
       });
@@ -212,6 +213,219 @@ describe('DeliveriesService', () => {
         cancelados: 1,
       });
       expect(mockRepository.count).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe('getAnalytics', () => {
+    it('deve calcular KPIs, series e agregacoes operacionais com filtros de periodo', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 1,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua A',
+          status: StatusEntrega.ENTREGUE,
+          createdAt: new Date('2026-06-01T08:00:00.000Z'),
+          dataHoraInicio: new Date('2026-06-01T09:00:00.000Z'),
+          deliveryEstimate: new Date('2026-06-01T11:00:00.000Z'),
+          driver: { id: 10, user: { nome: 'Ana Motorista' } },
+          occurrences: [],
+          finalization: {
+            finalizedAt: new Date('2026-06-01T10:00:00.000Z'),
+            gpsDivergente: false,
+            gpsValidado: true,
+            distanciaDestinoMetros: 25,
+            signatureUrl: 'sig2:assinatura',
+            receiverName: 'Cliente A',
+            receiverDocument: '12345678900',
+            latitude: -23.55,
+            longitude: -46.63,
+          },
+        },
+        {
+          id: 2,
+          companyId: 2,
+          driverId: 11,
+          destinationAddress: 'Rua B',
+          status: StatusEntrega.ENTREGUE,
+          createdAt: new Date('2026-06-02T08:00:00.000Z'),
+          dataHoraInicio: new Date('2026-06-02T09:00:00.000Z'),
+          deliveryEstimate: new Date('2026-06-02T10:00:00.000Z'),
+          driver: { id: 11, user: { nome: 'Bruno Motorista' } },
+          occurrences: [{ id: 7, tipoOcorrencia: 'GPS_INCOMPATIVEL' }],
+          finalization: {
+            finalizedAt: new Date('2026-06-02T10:30:00.000Z'),
+            gpsDivergente: true,
+            gpsValidado: false,
+            distanciaDestinoMetros: 250,
+            signatureUrl: null,
+            receiverName: 'Cliente B',
+            receiverDocument: null,
+            latitude: -23.56,
+            longitude: -46.64,
+          },
+        },
+        {
+          id: 3,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua C',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-03T08:00:00.000Z'),
+          dataHoraInicio: new Date('2026-06-03T09:00:00.000Z'),
+          driver: { id: 10, user: { nome: 'Ana Motorista' } },
+          occurrences: [],
+          finalization: null,
+        },
+        {
+          id: 4,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua D',
+          status: StatusEntrega.CANCELADO,
+          createdAt: new Date('2026-05-01T08:00:00.000Z'),
+          driver: { id: 10, user: { nome: 'Ana Motorista' } },
+          occurrences: [],
+          finalization: null,
+        },
+      ]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+      });
+
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        relations: [
+          'company',
+          'driver',
+          'driver.user',
+          'occurrences',
+          'finalization',
+          'details',
+        ],
+        order: { id: 'DESC' },
+      });
+      expect(analytics.kpis).toEqual({
+        totalDeliveries: 3,
+        completionRate: 66.67,
+        occurrenceRate: 33.33,
+        gpsDivergenceRate: 50,
+        averageDeliveryTimeMinutes: 75,
+        onTimeRate: 50,
+        averageDelayMinutes: 30,
+        proofCompletenessRate: 50,
+      });
+      expect(analytics.charts.statusDistribution).toEqual(
+        expect.arrayContaining([
+          { status: StatusEntrega.ENTREGUE, label: 'Entregue', value: 2 },
+          { status: StatusEntrega.EM_ROTA, label: 'Em rota', value: 1 },
+        ]),
+      );
+      expect(analytics.charts.deliveriesByDay).toEqual(
+        expect.arrayContaining([
+          { date: '2026-06-01', created: 1, finalized: 1, withOccurrence: 0 },
+          { date: '2026-06-02', created: 1, finalized: 1, withOccurrence: 1 },
+        ]),
+      );
+      expect(analytics.charts.occurrencesByType).toEqual([
+        { type: 'GPS_INCOMPATIVEL', label: 'GPS incompativel', value: 1 },
+      ]);
+      expect(analytics.charts.driverRanking[0]).toEqual({
+        driverId: 11,
+        driverName: 'Bruno Motorista',
+        deliveries: 1,
+        completed: 1,
+        occurrences: 1,
+        averageDeliveryTimeMinutes: 90,
+        successRate: 100,
+      });
+      expect(analytics.charts.gpsDistanceBuckets).toEqual([
+        { label: '0-30m', value: 1 },
+        { label: '30-100m', value: 0 },
+        { label: '100-200m', value: 0 },
+        { label: 'mais de 200m', value: 1 },
+      ]);
+      expect(analytics.charts.alertsSummary).toEqual(
+        expect.arrayContaining([
+          {
+            type: 'GPS_DIVERGENTE',
+            label: 'GPS divergente',
+            severity: 'critical',
+            total: 1,
+          },
+        ]),
+      );
+    });
+
+    it('deve retornar zeros e arrays estaveis quando nao houver dados', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+      });
+
+      expect(analytics.kpis).toEqual({
+        totalDeliveries: 0,
+        completionRate: 0,
+        occurrenceRate: 0,
+        gpsDivergenceRate: 0,
+        averageDeliveryTimeMinutes: 0,
+        onTimeRate: 0,
+        averageDelayMinutes: 0,
+        proofCompletenessRate: 0,
+      });
+      expect(analytics.charts.statusDistribution).toEqual([]);
+      expect(analytics.charts.deliveriesByDay).toEqual([]);
+      expect(analytics.charts.driverRanking).toEqual([]);
+    });
+  });
+
+  describe('getAlerts', () => {
+    it('deve gerar alertas operacionais sem duplicar regras por entrega', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 31,
+          status: StatusEntrega.ENTREGUE,
+          deliveryEstimate: new Date('2026-06-02T10:00:00.000Z'),
+          occurrences: [{ id: 1, tipoOcorrencia: 'GPS_INCOMPATIVEL' }],
+          finalization: {
+            finalizedAt: new Date('2026-06-02T11:30:00.000Z'),
+            gpsDivergente: true,
+            distanciaDestinoMetros: 340,
+            signatureUrl: null,
+            receiverName: 'Cliente',
+            receiverDocument: null,
+          },
+        },
+      ]);
+
+      const alerts = await service.getAlerts();
+
+      expect(alerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'delivery-31-gps-divergente',
+            type: 'GPS_DIVERGENTE',
+            severity: 'critical',
+            deliveryId: 31,
+          }),
+          expect.objectContaining({
+            id: 'delivery-31-entrega-atrasada',
+            type: 'ENTREGA_ATRASADA',
+            severity: 'critical',
+            deliveryId: 31,
+          }),
+          expect.objectContaining({
+            id: 'delivery-31-comprovante-incompleto',
+            type: 'COMPROVANTE_INCOMPLETO',
+            severity: 'warning',
+            deliveryId: 31,
+          }),
+        ]),
+      );
+      expect(alerts.filter((alert) => alert.id === 'delivery-31-gps-divergente')).toHaveLength(1);
     });
   });
 

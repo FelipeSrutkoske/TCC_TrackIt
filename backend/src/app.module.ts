@@ -7,6 +7,7 @@ import { OccurrencesModule } from './occurrences/occurrences.module';
 import { FinalizationsModule } from './finalizations/finalizations.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
+import { DeliveryProofEmailsModule } from './proof-emails/proof-emails.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CompaniesModule } from './companies/companies.module';
     OccurrencesModule,
     FinalizationsModule,
     CompaniesModule,
+    DeliveryProofEmailsModule,
     AuthModule,
   ],
   controllers: [],
