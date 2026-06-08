@@ -110,7 +110,7 @@ export class DeliveryProofEmailsService {
     await transporter.sendMail({
       from: process.env.SMTP_FROM ?? 'TrackIt <no-reply@trackit.local>',
       to: emailDestino,
-      subject: `Comprovante de entrega #${delivery.id}`,
+      subject: `Comprovante TrackIt - Entrega: #${delivery.id}`,
       html: content.html,
       attachments: content.attachments,
     });
@@ -164,7 +164,7 @@ export class DeliveryProofEmailsService {
                   <tr>
                     <td style="background:#1f2320;padding:26px 30px;color:#ffffff;">
                       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a8bc94;font-weight:700;">TrackIt</div>
-                      <h1 style="margin:10px 0 4px;font-size:28px;line-height:1.2;">Comprovante auditavel de entrega #${delivery.id}</h1>
+                      <h1 style="margin:10px 0 4px;font-size:28px;line-height:1.2;">Comprovante de entrega #${delivery.id}</h1>
                       <p style="margin:0;color:#cbd5c7;font-size:14px;">Evidencias registradas para auditoria operacional last mile.</p>
                     </td>
                   </tr>
