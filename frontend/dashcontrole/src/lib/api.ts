@@ -1,5 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
+function clearClientSession(): void {
+  if (typeof window === 'undefined') return;
+
+  localStorage.removeItem('trackit_token');
+  localStorage.removeItem('trackit_user');
+  document.cookie = 'trackit_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   const token = localStorage.getItem('trackit_token');
@@ -27,6 +38,11 @@ export async function apiFetch<T = unknown>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearClientSession();
+      throw new Error('Sessao expirada. Faca login novamente.');
+    }
+
     let mensagem = `Erro ${response.status}: ${response.statusText}`;
     try {
       const corpo = await response.json();

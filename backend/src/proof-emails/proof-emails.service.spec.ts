@@ -144,7 +144,7 @@ describe('DeliveryProofEmailsService', () => {
     await service.sendDeliveryProof(21);
 
     const message = mockSendMail.mock.calls[0][0];
-    expect(message.html).toContain('Comprovante auditavel de entrega');
+    expect(message.html).toContain('Comprovante de entrega #21');
     expect(message.html).toContain('cid:delivery-map-21');
     expect(message.html).toContain('cid:delivery-signature-21');
     expect(message.html).not.toContain('<svg');
