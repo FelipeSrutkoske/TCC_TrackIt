@@ -64,10 +64,13 @@ describe('CurrentDeliveriesScreen', () => {
     expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
     expect(screen.getByText('2 Ativas')).toBeOnTheScreen();
     expect(screen.getByText('1 Em rota')).toBeOnTheScreen();
-    expect(screen.getByText('1 Aguardando')).toBeOnTheScreen();
+    expect(screen.getByText('1 Pendente')).toBeOnTheScreen();
+    expect(screen.getByTestId('current-deliveries-chevron-icon')).toBeOnTheScreen();
     expect(await screen.findByText('Rua B, 200 - Centro')).toBeOnTheScreen();
     expect(screen.getByText('Rua A, 100 - Centro')).toBeOnTheScreen();
-    expect(screen.getByText('Aguardando motorista')).toBeOnTheScreen();
+    expect(screen.getByText('Pendente')).toBeOnTheScreen();
+    expect(screen.queryByText('1 Aguardando')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Aguardando motorista')).not.toBeOnTheScreen();
   });
 
   it('expande e recolhe o resumo operacional ao tocar no card', async () => {

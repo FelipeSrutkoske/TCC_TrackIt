@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { AppScreen } from '../components/AppScreen';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../contexts/AuthContext';
+import { RootStackParamList } from '../navigation/types';
 import { getDeliveryHistory } from '../services/deliveries.service';
 import { Delivery, DeliveryHistoryMetrics } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
+
+type HistoryScreenProps = Partial<NativeStackScreenProps<RootStackParamList, 'History'>>;
 
 const EMPTY_METRICS: DeliveryHistoryMetrics = {
   totalConcluidas: 0,
@@ -16,43 +20,64 @@ const EMPTY_METRICS: DeliveryHistoryMetrics = {
   taxaConclusao: 0,
 };
 
-export function HistoryScreen() {
+export function HistoryScreen({ navigation }: HistoryScreenProps) {
   const { session } = useAuth();
   const { theme } = useAppTheme();
   const [items, setItems] = useState<Delivery[]>([]);
   const [metrics, setMetrics] = useState<DeliveryHistoryMetrics>(EMPTY_METRICS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedDeliveryId, setExpandedDeliveryId] = useState<number | null>(null);
 
-  useEffect(() => {
-    async function loadHistory() {
-      if (!session?.accessToken) {
-        setItems([]);
-        setMetrics(EMPTY_METRICS);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await getDeliveryHistory(session.accessToken);
-
-        setItems(response.items);
-        setMetrics(response.metrics);
-        setError(null);
-      } catch (nextError) {
-        setError(
-          nextError instanceof Error ? nextError.message : 'Nao foi possivel carregar o historico',
-        );
-      } finally {
-        setIsLoading(false);
-      }
+  async function loadHistory() {
+    if (!session?.accessToken) {
+      setItems([]);
+      setMetrics(EMPTY_METRICS);
+      setIsLoading(false);
+      return;
     }
 
+    setIsLoading(true);
+
+    try {
+      const response = await getDeliveryHistory(session.accessToken);
+
+      setItems(response.items);
+      setMetrics(response.metrics);
+      setError(null);
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error ? nextError.message : 'Nao foi possivel carregar o historico',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
     void loadHistory();
   }, [session?.accessToken]);
 
   return (
-    <AppScreen>
+    <AppScreen
+      rightActions={[
+        {
+          accessibilityLabel: 'Atualizar historico operacional',
+          disabled: isLoading,
+          icon: 'refresh',
+          onPress: () => {
+            void loadHistory();
+          },
+        },
+        {
+          accessibilityLabel: 'Ir para o inicio',
+          icon: 'home',
+          onPress: () => {
+            navigation?.reset?.({ index: 0, routes: [{ name: 'Home' }] });
+          },
+        },
+      ]}
+    >
       <ScrollView contentContainerStyle={styles.container} testID="history-scroll">
         <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
           <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Leitura consolidada</Text>
@@ -106,31 +131,69 @@ export function HistoryScreen() {
         {!isLoading && !error && items.length > 0 ? (
           <View style={styles.list}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Entregas recentes</Text>
-            {items.map((delivery) => (
-              <View
-                key={delivery.id}
-                style={[styles.deliveryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              >
-                <View style={styles.deliveryHeader}>
-                  <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? `Entrega #${delivery.id}`}</Text>
-                  <StatusBadge status={delivery.status} />
-                </View>
-                <View style={styles.timeGrid}>
-                  <View style={styles.timeBlock}>
-                    <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Criada em</Text>
-                    <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.createdAt)}</Text>
+            <Text style={[styles.listHint, { color: theme.colors.textMuted }]}>Toque em cards sinalizados para auditar ocorrencias.</Text>
+            {items.map((delivery) => {
+              const hasOccurrences = (delivery.occurrences?.length ?? 0) > 0;
+              const isExpanded = expandedDeliveryId === delivery.id;
+
+              return (
+                <Pressable
+                  accessibilityLabel={`Ver detalhes da entrega historica ${delivery.id}`}
+                  accessibilityRole="button"
+                  key={delivery.id}
+                  onPress={() => {
+                    setExpandedDeliveryId((current) => (current === delivery.id ? null : delivery.id));
+                  }}
+                  style={({ pressed }) => [
+                    styles.deliveryCard,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: hasOccurrences ? theme.colors.statusDanger : theme.colors.border,
+                      opacity: pressed ? 0.82 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.deliveryHeader}>
+                    <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? `Entrega #${delivery.id}`}</Text>
+                    <StatusBadge status={delivery.status} />
                   </View>
-                  <View style={styles.timeBlock}>
-                    <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Finalizada em</Text>
-                    <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.finalization?.finalizedAt)}</Text>
+
+                  {hasOccurrences ? (
+                    <View style={[styles.occurrenceBadge, { backgroundColor: theme.colors.statusDanger }]}>
+                      <Text style={[styles.occurrenceBadgeText, { color: theme.colors.statusDangerText }]}>Ocorrencia registrada</Text>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.timeGrid}>
+                    <View style={styles.timeBlock}>
+                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Criada em</Text>
+                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.createdAt)}</Text>
+                    </View>
+                    <View style={styles.timeBlock}>
+                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Finalizada em</Text>
+                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.finalization?.finalizedAt)}</Text>
+                    </View>
                   </View>
-                </View>
-                <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Tempo de entrega</Text>
-                <Text style={[styles.duration, { color: theme.colors.text }]}>{formatDuration(delivery.createdAt, delivery.finalization?.finalizedAt)}</Text>
-                <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Destino</Text>
-                <Text style={[styles.destination, { color: theme.colors.text }]}>{delivery.destinationAddress}</Text>
-              </View>
-            ))}
+                  <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Tempo de entrega</Text>
+                  <Text style={[styles.duration, { color: theme.colors.text }]}>{formatDuration(delivery.createdAt, delivery.finalization?.finalizedAt)}</Text>
+                  <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Destino</Text>
+                  <Text style={[styles.destination, { color: theme.colors.text }]}>{delivery.destinationAddress}</Text>
+
+                  {hasOccurrences && isExpanded ? (
+                    <View style={[styles.occurrencePanel, { backgroundColor: theme.colors.surfaceMuted }]}>
+                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Ocorrencias</Text>
+                      {delivery.occurrences?.map((occurrence) => (
+                        <View key={occurrence.id} style={styles.occurrenceItem}>
+                          <Text style={[styles.occurrenceType, { color: theme.colors.text }]}>{formatOccurrenceType(occurrence.tipoOcorrencia)}</Text>
+                          <Text style={[styles.destination, { color: theme.colors.text }]}>{occurrence.descricao ?? 'Sem descricao informada'}</Text>
+                          <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>{formatDateTime(occurrence.createdAt)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </Pressable>
+              );
+            })}
           </View>
         ) : null}
       </ScrollView>
@@ -231,10 +294,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.4,
   },
+  listHint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   deliveryCard: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 22,
-    padding: 16,
+    padding: 14,
     gap: 10,
   },
   deliveryHeader: {
@@ -244,19 +311,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   code: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
   timeGrid: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     flexWrap: 'wrap',
   },
   timeBlock: {
     flexGrow: 1,
-    minWidth: 130,
-    gap: 4,
+    minWidth: 126,
+    gap: 3,
   },
   destinationLabel: {
     fontSize: 12,
@@ -265,12 +333,36 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   destination: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 21,
+    lineHeight: 20,
   },
   duration: {
-    fontSize: 17,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  occurrenceBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  occurrenceBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  occurrencePanel: {
+    borderRadius: 16,
+    gap: 8,
+    padding: 12,
+  },
+  occurrenceItem: {
+    gap: 4,
+  },
+  occurrenceType: {
+    fontSize: 14,
     fontWeight: '900',
   },
 });
@@ -320,4 +412,16 @@ function formatDuration(startValue?: string | null, endValue?: string | null) {
   }
 
   return `${hours}h ${minutes}min`;
+}
+
+function formatOccurrenceType(value?: string | null) {
+  if (!value) {
+    return 'Ocorrencia';
+  }
+
+  return value
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }

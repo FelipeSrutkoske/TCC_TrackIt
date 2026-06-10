@@ -8,8 +8,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { TrackItMark } from '../components/brand/TrackItMark';
 import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
-import { getDeliveryHistory, listCurrentDeliveries } from '../services/deliveries.service';
-import { DeliveryHistoryMetrics } from '../types/delivery';
+import { listCurrentDeliveries } from '../services/deliveries.service';
 import { useAppTheme } from '../theme/AppThemeProvider';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -19,40 +18,55 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const { theme } = useAppTheme();
   const [activeDeliveries, setActiveDeliveries] = useState(0);
   const [inRouteDeliveries, setInRouteDeliveries] = useState(0);
-  const [historyMetrics, setHistoryMetrics] = useState<DeliveryHistoryMetrics | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    async function loadSummary() {
-      if (!session?.accessToken) {
-        setActiveDeliveries(0);
-        setInRouteDeliveries(0);
-        setHistoryMetrics(null);
-        return;
-      }
-
-      try {
-        const [currentDeliveries, history] = await Promise.all([
-          listCurrentDeliveries(session.accessToken),
-          getDeliveryHistory(session.accessToken),
-        ]);
-
-        setActiveDeliveries(currentDeliveries.length);
-        setInRouteDeliveries(
-          currentDeliveries.filter((delivery) => delivery.status === 'EM_ROTA').length,
-        );
-        setHistoryMetrics(history.metrics);
-      } catch {
-        setActiveDeliveries(0);
-        setInRouteDeliveries(0);
-        setHistoryMetrics(null);
-      }
+  async function loadSummary() {
+    if (!session?.accessToken) {
+      setActiveDeliveries(0);
+      setInRouteDeliveries(0);
+      return;
     }
 
+    try {
+      const currentDeliveries = await listCurrentDeliveries(session.accessToken);
+
+      setActiveDeliveries(currentDeliveries.length);
+      setInRouteDeliveries(
+        currentDeliveries.filter((delivery) => delivery.status === 'EM_ROTA').length,
+      );
+    } catch {
+      setActiveDeliveries(0);
+      setInRouteDeliveries(0);
+    }
+  }
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+
+    try {
+      await loadSummary();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
     void loadSummary();
   }, [session?.accessToken]);
 
   return (
-    <AppScreen>
+    <AppScreen
+      rightActions={[
+        {
+          accessibilityLabel: 'Atualizar entregas do hub',
+          disabled: isRefreshing,
+          icon: 'refresh',
+          onPress: () => {
+            void handleRefresh();
+          },
+        },
+      ]}
+    >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
           <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
@@ -60,23 +74,17 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               <View style={styles.heroCopy}>
                 <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Painel do motorista</Text>
                 <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Ola, {session?.user.nome?.split(' ')[0]}</Text>
-                <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Acompanhe entregas ativas, consulte o historico e ajuste a aparencia do app sem perder a identidade TrackIt.</Text>
+                <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Consulte suas entregas pendentes e em rota, atualize a fila e mantenha o fluxo operacional sob controle.</Text>
               </View>
               <View style={[styles.markBadge, { backgroundColor: theme.colors.highlight }]}>
-                <TrackItMark height={56} width={44} />
+                <TrackItMark height={44} width={34} />
               </View>
             </View>
 
             <View style={styles.heroMetrics}>
               <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}> 
-                <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Entregas ativas</Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Suas entregas</Text>
                 <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{activeDeliveries}</Text>
-              </View>
-              <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}> 
-                <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Taxa de conclusao</Text>
-                <Text style={[styles.metricValueSmall, { color: theme.colors.accentText }]}> 
-                  {historyMetrics ? `${historyMetrics.taxaConclusao}%` : '--'}
-                </Text>
               </View>
             </View>
           </View>
@@ -93,9 +101,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryBlock}>
-                <Text style={[styles.summaryLabel, { color: theme.colors.textMuted }]}>Concluidas</Text>
+                <Text style={[styles.summaryLabel, { color: theme.colors.textMuted }]}>Pendentes</Text>
                 <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                  {historyMetrics?.totalConcluidas ?? 0}
+                  {activeDeliveries - inRouteDeliveries}
                 </Text>
               </View>
             </View>

@@ -19,4 +19,15 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Entregue')).toHaveStyle({ color: '#F4FFF7' });
     expect(screen.getByText('Cancelado')).toHaveStyle({ color: '#FFF5F5' });
   });
+
+  it('shows pending label for deliveries waiting for driver action', () => {
+    render(
+      <AppThemeProvider>
+        <StatusBadge status="AGUARDANDO_MOTORISTA" />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Pendente')).toBeOnTheScreen();
+    expect(screen.queryByText('Aguardando motorista')).toBeNull();
+  });
 });
