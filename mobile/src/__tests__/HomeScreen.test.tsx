@@ -65,7 +65,7 @@ describe('HomeScreen', () => {
     expect(navigate).toHaveBeenCalledWith('Settings');
   });
 
-  it('shows delivery summary instead of static account information', async () => {
+  it('shows current driver deliveries instead of completion rate', async () => {
     render(
       <AppThemeProvider>
         <HomeScreen navigation={{ navigate: jest.fn() } as never} route={{ key: 'Home', name: 'Home' } as never} />
@@ -76,10 +76,37 @@ describe('HomeScreen', () => {
       expect(screen.getByText('2')).toBeOnTheScreen();
     });
 
-    expect(screen.getByText('Entregas ativas')).toBeOnTheScreen();
-    expect(screen.getByText('80%')).toBeOnTheScreen();
-    expect(screen.getByText('Taxa de conclusao')).toBeOnTheScreen();
+    expect(screen.getByText('Suas entregas')).toBeOnTheScreen();
+    expect(screen.queryByText('80%')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Taxa de conclusao')).not.toBeOnTheScreen();
     expect(screen.queryByText('Conta ativa')).not.toBeOnTheScreen();
     expect(screen.queryByText('Contato')).not.toBeOnTheScreen();
+  });
+
+  it('refreshes the hub summary from the header action', async () => {
+    mockListCurrentDeliveries
+      .mockResolvedValueOnce([
+        { id: 2, driverId: 99, destinationAddress: 'Rua B', status: 'EM_ROTA' },
+      ])
+      .mockResolvedValueOnce([
+        { id: 2, driverId: 99, destinationAddress: 'Rua B', status: 'EM_ROTA' },
+        { id: 3, driverId: 99, destinationAddress: 'Rua C', status: 'AGUARDANDO_MOTORISTA' },
+      ]);
+
+    render(
+      <AppThemeProvider>
+        <HomeScreen navigation={{ navigate: jest.fn() } as never} route={{ key: 'Home', name: 'Home' } as never} />
+      </AppThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockListCurrentDeliveries).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.press(screen.getByLabelText('Atualizar entregas do hub'));
+
+    await waitFor(() => {
+      expect(mockListCurrentDeliveries).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -5,7 +5,19 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/AppThemeProvider';
 
-export function AppScreen({ children }: { children: ReactNode }) {
+type AppHeaderAction = {
+  accessibilityLabel: string;
+  icon: 'refresh' | 'home';
+  onPress: () => void;
+  disabled?: boolean;
+};
+
+type AppScreenProps = {
+  children: ReactNode;
+  rightActions?: AppHeaderAction[];
+};
+
+export function AppScreen({ children, rightActions = [] }: AppScreenProps) {
   const { theme } = useAppTheme();
   const navigationContext = ReactNavigation.NavigationContext;
   const navigation = navigationContext ? React.useContext(navigationContext) : null;
@@ -41,7 +53,27 @@ export function AppScreen({ children }: { children: ReactNode }) {
             ) : null}
           </View>
           <Text style={[styles.brand, { color: theme.colors.text }]}>TrackIt</Text>
-          <View style={styles.backSlot} />
+          <View style={styles.actionsSlot}>
+            {rightActions.map((action) => (
+              <Pressable
+                accessibilityLabel={action.accessibilityLabel}
+                accessibilityRole="button"
+                disabled={action.disabled}
+                key={action.accessibilityLabel}
+                onPress={action.onPress}
+                style={({ pressed }) => [
+                  styles.headerActionButton,
+                  { opacity: action.disabled ? 0.38 : pressed ? 0.55 : 1 },
+                ]}
+              >
+                {action.icon === 'refresh' ? (
+                  <RefreshIcon color={theme.colors.text} />
+                ) : (
+                  <HomeIcon color={theme.colors.text} />
+                )}
+              </Pressable>
+            ))}
+          </View>
         </View>
         <View style={styles.body} testID="app-screen-body">
           {children}
@@ -85,7 +117,20 @@ const styles = StyleSheet.create({
     width: 40,
     alignItems: 'center',
   },
+  actionsSlot: {
+    minWidth: 40,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 2,
+  },
   backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -113,6 +158,45 @@ function SquareArrowLeftIcon({ color }: { color: string }) {
       <Rect height={18} rx={2} width={18} x={3} y={3} />
       <Path d="m12 8-4 4 4 4" />
       <Path d="M16 12H8" />
+    </Svg>
+  );
+}
+
+function RefreshIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      fill="none"
+      height={22}
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={22}
+    >
+      <Path d="M21 12a9 9 0 0 1-15.5 6.2" />
+      <Path d="M3 12A9 9 0 0 1 18.5 5.8" />
+      <Path d="M18 2v4h4" />
+      <Path d="M6 22v-4H2" />
+    </Svg>
+  );
+}
+
+function HomeIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      fill="none"
+      height={22}
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={22}
+    >
+      <Path d="m3 10 9-7 9 7" />
+      <Path d="M5 10v10h14V10" />
+      <Path d="M9 20v-6h6v6" />
     </Svg>
   );
 }

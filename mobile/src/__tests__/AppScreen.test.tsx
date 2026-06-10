@@ -76,4 +76,33 @@ describe('AppScreen', () => {
     expect(screen.getByTestId('app-top-bar')).toBeOnTheScreen();
     expect(screen.getByTestId('app-screen-body')).toBeOnTheScreen();
   });
+
+  it('renders and triggers header actions on the right side', () => {
+    mockCanGoBack.mockReturnValue(false);
+    const onRefresh = jest.fn();
+    const onHome = jest.fn();
+
+    render(
+      <AppThemeProvider>
+        <NavigationContext.Provider
+          value={{ canGoBack: mockCanGoBack, goBack: mockGoBack } as any}
+        >
+          <AppScreen
+            rightActions={[
+              { accessibilityLabel: 'Atualizar dados', icon: 'refresh', onPress: onRefresh },
+              { accessibilityLabel: 'Ir para inicio', icon: 'home', onPress: onHome },
+            ]}
+          >
+            <></>
+          </AppScreen>
+        </NavigationContext.Provider>
+      </AppThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText('Atualizar dados'));
+    fireEvent.press(screen.getByLabelText('Ir para inicio'));
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(onHome).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 
@@ -26,8 +26,27 @@ describe('HistoryScreen', () => {
   });
 
   it('loads history items and backend metrics for the authenticated driver', async () => {
-    mockGetDeliveryHistory.mockResolvedValueOnce({
+    const navigation = { reset: jest.fn() };
+
+    mockGetDeliveryHistory.mockResolvedValue({
       items: [
+        {
+          id: 5,
+          driverId: 701,
+          company: { id: 10, corporateName: 'Loja Com Ocorrencia' },
+          createdAt: '2026-05-24T09:00:00.000Z',
+          finalization: { finalizedAt: '2026-05-24T09:40:00.000Z' },
+          destinationAddress: 'Rua E',
+          status: 'CANCELADO',
+          occurrences: [
+            {
+              id: 30,
+              tipoOcorrencia: 'DESTINATARIO_AUSENTE',
+              descricao: 'Cliente nao estava no local informado',
+              createdAt: '2026-05-24T09:35:00.000Z',
+            },
+          ],
+        },
         { id: 4, driverId: 701, destinationAddress: 'Rua D', status: 'CANCELADO' },
         {
           id: 3,
@@ -49,7 +68,7 @@ describe('HistoryScreen', () => {
 
     render(
       <AppThemeProvider>
-        <HistoryScreen />
+        <HistoryScreen navigation={navigation as never} />
       </AppThemeProvider>,
     );
 
@@ -70,5 +89,23 @@ describe('HistoryScreen', () => {
     expect(screen.getAllByText('Tempo de entrega').length).toBeGreaterThan(0);
     expect(screen.getByText('2h 30min')).toBeOnTheScreen();
     expect(screen.getByText('Rua C')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Atualizar historico operacional')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Ir para o inicio')).toBeOnTheScreen();
+    expect(screen.getByText('Ocorrencia registrada')).toBeOnTheScreen();
+    expect(screen.queryByText('Cliente nao estava no local informado')).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByLabelText('Ver detalhes da entrega historica 5'));
+
+    expect(screen.getByText('Cliente nao estava no local informado')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByLabelText('Atualizar historico operacional'));
+
+    await waitFor(() => {
+      expect(mockGetDeliveryHistory).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.press(screen.getByLabelText('Ir para o inicio'));
+
+    expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Home' }] });
   });
 });

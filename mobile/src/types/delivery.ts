@@ -16,6 +16,13 @@ export type DeliveryDetail = {
   valorDeclarado: number | string;
 };
 
+export type DeliveryOccurrence = {
+  id: number;
+  tipoOcorrencia?: string | null;
+  descricao?: string | null;
+  createdAt?: string | null;
+};
+
 export type Delivery = {
   id: number;
   driverId: number;
@@ -36,6 +43,7 @@ export type Delivery = {
   longitudeInicio?: number | string | null;
   dataHoraInicio?: string | null;
   details?: DeliveryDetail[];
+  occurrences?: DeliveryOccurrence[];
   finalization?: {
     receiverName?: string | null;
     receiverDocument?: string | null;

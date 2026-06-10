@@ -5,7 +5,7 @@ import { useAppTheme } from '../theme/AppThemeProvider';
 import { AppTheme } from '../theme/tokens';
 
 const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  AGUARDANDO_MOTORISTA: 'Aguardando motorista',
+  AGUARDANDO_MOTORISTA: 'Pendente',
   EM_ROTA: 'Em rota',
   ENTREGUE: 'Entregue',
   CANCELADO: 'Cancelado',

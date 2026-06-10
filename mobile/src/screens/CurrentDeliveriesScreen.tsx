@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import Svg, { Path } from 'react-native-svg';
 import { DeliveryCard } from '../components/DeliveryCard';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
@@ -81,13 +82,13 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
               <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Operacao ativa</Text>
               <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entregas atuais</Text>
             </View>
-            <Text style={[styles.chevron, { color: theme.colors.accentText }]}>{isSummaryExpanded ? '^' : 'v'}</Text>
+            <ChevronIcon color={theme.colors.accentText} expanded={isSummaryExpanded} />
           </View>
 
           <View style={styles.compactMetricsRow}>
             <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{deliveries.length} Ativas</Text>
             <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{inRouteDeliveries} Em rota</Text>
-            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{awaitingDeliveries} Aguardando</Text>
+            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{awaitingDeliveries} Pendente</Text>
           </View>
 
           {isSummaryExpanded ? (
@@ -104,7 +105,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
                   <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{inRouteDeliveries}</Text>
                 </View>
                 <View style={[styles.metric, { borderColor: theme.colors.borderStrong }]}>
-                  <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Aguardando</Text>
+                  <Text style={[styles.metricLabel, { color: theme.colors.accentText }]}>Pendente</Text>
                   <Text style={[styles.metricValue, { color: theme.colors.accentText }]}>{awaitingDeliveries}</Text>
                 </View>
               </View>
@@ -149,13 +150,13 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 18,
-    gap: 18,
+    padding: 16,
+    gap: 14,
   },
   hero: {
-    borderRadius: 30,
-    gap: 14,
-    padding: 20,
+    borderRadius: 24,
+    gap: 10,
+    padding: 14,
   },
   heroHeader: {
     alignItems: 'center',
@@ -167,10 +168,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  chevron: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
   heroEyebrow: {
     fontSize: 12,
     fontWeight: '700',
@@ -178,9 +175,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: -0.7,
+    letterSpacing: -0.6,
   },
   heroSubtitle: {
     fontSize: 15,
@@ -188,29 +185,29 @@ const styles = StyleSheet.create({
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   compactMetricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   compactMetric: {
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   metric: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
-    gap: 4,
-    padding: 12,
+    gap: 2,
+    padding: 9,
   },
   metricLabel: {
     fontSize: 11,
@@ -223,7 +220,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   list: {
-    gap: 16,
+    gap: 12,
     paddingBottom: 24,
   },
 });
+
+function ChevronIcon({ color, expanded }: { color: string; expanded: boolean }) {
+  return (
+    <Svg
+      fill="none"
+      height={22}
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2.4}
+      testID="current-deliveries-chevron-icon"
+      viewBox="0 0 24 24"
+      width={22}
+    >
+      <Path d={expanded ? 'm18 15-6-6-6 6' : 'm6 9 6 6 6-6'} />
+    </Svg>
+  );
+}
