@@ -14,6 +14,7 @@ Dev.MD
 !.yarn/releases
 !.yarn/versions
 
+
 #PROJECT_FUNCIONALITIES
 PROJECT_FUNCTIONALITIES.md
 PROOF_EMAIL_FUNCTIONALITY.md
@@ -134,3 +135,20 @@ frontend/dashcontrole/env
 
 /md
 frontend/dashcontrole/.env.local.example
+AGENT_CONTEXT.md
+docs/plans/trackit-final
+.worktrees/trackit-final/docs/plans/
+.worktrees/trackit-finals/docs/requirements/
+.worktrees/trackit-finals/docs/specs/
+docs/trackit-final/
+docs/requirements/
+docs/requirements*
+docs/specs/.
+docs/specs/01_rubrica-final-matriz-fechamento.md
+docs/specs/02_rubrica-testes-crud-observabilidade.md
+docs/specs/03_rubrica-modelagem-diagramas.md
+docs/specs/04_rubrica-seguranca-permissoes.md
+docs/specs/05_rubrica-funcionalidade-fluxo-entregas.md
+docs/specs/06_rubrica-ux-apresentacao-defesa.md
+docs/specs/07_rubrica-solid-justificativa-tecnica.md
+docs/specs/08_rubrica-validacoes-mascaras.md

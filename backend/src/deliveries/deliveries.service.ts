@@ -14,6 +14,7 @@ import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { StartDeliveryDto } from './dto/start-delivery.dto';
 import { DeliveryAnalyticsQueryDto } from './dto/delivery-analytics-query.dto';
 import { UsersService } from '../users/users.service';
+import type { CompanyScope } from '../common/company-scope';
 
 interface DeliveryAnalyticsFilters {
   startDate: string;
@@ -157,7 +158,19 @@ export class DeliveriesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(createDeliveryDto: CreateDeliveryDto): Promise<Delivery> {
+  private readonly deliveryRelations = [
+    'company',
+    'driver',
+    'driver.user',
+    'occurrences',
+    'finalization',
+    'details',
+  ];
+
+  async create(
+    createDeliveryDto: CreateDeliveryDto,
+    scope?: CompanyScope,
+  ): Promise<Delivery> {
     const { detalhesEntrega, motoristaId, empresaId, ...deliveryData } =
       createDeliveryDto;
 
@@ -167,7 +180,8 @@ export class DeliveriesService {
       );
     }
 
-    const companyId = empresaId ?? deliveryData.companyId;
+    const requestedCompanyId = empresaId ?? deliveryData.companyId;
+    const companyId = this.getScopedCompanyId(scope, requestedCompanyId);
 
     if (!companyId) {
       throw new BadRequestException('Selecione a empresa da entrega');
@@ -208,19 +222,15 @@ export class DeliveriesService {
       },
     );
 
-    return this.findOne(createdDeliveryId);
+    return this.findOne(createdDeliveryId, scope);
   }
 
-  findAll(): Promise<Delivery[]> {
+  findAll(scope?: CompanyScope): Promise<Delivery[]> {
+    const scopedWhere = this.getScopedDeliveryWhere(scope);
+
     return this.deliveriesRepository.find({
-      relations: [
-        'company',
-        'driver',
-        'driver.user',
-        'occurrences',
-        'finalization',
-        'details',
-      ],
+      ...(scopedWhere ? { where: scopedWhere } : {}),
+      relations: this.deliveryRelations,
       order: { id: 'DESC' },
     });
   }
@@ -303,17 +313,10 @@ export class DeliveriesService {
     };
   }
 
-  async findOne(id: number): Promise<Delivery> {
+  async findOne(id: number, scope?: CompanyScope): Promise<Delivery> {
     const delivery = await this.deliveriesRepository.findOne({
-      where: { id },
-      relations: [
-        'company',
-        'driver',
-        'driver.user',
-        'occurrences',
-        'finalization',
-        'details',
-      ],
+      where: { id, ...(this.getScopedDeliveryWhere(scope) ?? {}) },
+      relations: this.deliveryRelations,
     });
     if (!delivery) throw new NotFoundException(`Entrega #${id} não encontrada`);
     return delivery;
@@ -372,51 +375,62 @@ export class DeliveriesService {
   async update(
     id: number,
     updateDeliveryDto: UpdateDeliveryDto,
+    scope?: CompanyScope,
   ): Promise<Delivery> {
-    const updateData = { ...updateDeliveryDto };
+    await this.findOne(id, scope);
+
+    const { empresaId, ...updateData } = { ...updateDeliveryDto };
     if (updateData.motoristaId !== undefined) {
       updateData.driverId = updateData.motoristaId;
       delete updateData.motoristaId;
     }
+    const requestedCompanyId = empresaId ?? updateData.companyId;
+    const companyId = this.getScopedCompanyId(scope, requestedCompanyId);
+    if (companyId) {
+      updateData.companyId = companyId;
+    }
+
     await this.deliveriesRepository.update(id, updateData);
-    return this.findOne(id);
+    return this.findOne(id, scope);
   }
 
-  async remove(id: number): Promise<void> {
-    const delivery = await this.findOne(id);
+  async remove(id: number, scope?: CompanyScope): Promise<void> {
+    const delivery = await this.findOne(id, scope);
     await this.deliveriesRepository.remove(delivery);
   }
 
-  async getStats() {
-    const total = await this.deliveriesRepository.count();
+  async getStats(scope?: CompanyScope) {
+    const scopedWhere = this.getScopedDeliveryWhere(scope) ?? {};
+    const total = await this.deliveriesRepository.count(
+      Object.keys(scopedWhere).length ? { where: scopedWhere } : undefined,
+    );
     const entregues = await this.deliveriesRepository.count({
-      where: { status: StatusEntrega.ENTREGUE },
+      where: { ...scopedWhere, status: StatusEntrega.ENTREGUE },
     });
     const pendentes = await this.deliveriesRepository.count({
-      where: { status: StatusEntrega.AGUARDANDO_MOTORISTA },
+      where: { ...scopedWhere, status: StatusEntrega.AGUARDANDO_MOTORISTA },
     });
     const emRota = await this.deliveriesRepository.count({
-      where: { status: StatusEntrega.EM_ROTA },
+      where: { ...scopedWhere, status: StatusEntrega.EM_ROTA },
     });
     const cancelados = await this.deliveriesRepository.count({
-      where: { status: StatusEntrega.CANCELADO },
+      where: { ...scopedWhere, status: StatusEntrega.CANCELADO },
     });
     return { total, entregues, pendentes, emRota, cancelados };
   }
 
   async getAnalytics(
     query: DeliveryAnalyticsQueryDto = {},
+    scope?: CompanyScope,
   ): Promise<DeliveryAnalyticsResponse> {
-    const filters = this.normalizeAnalyticsFilters(query);
+    const filters = this.applyScopeToAnalyticsFilters(
+      this.normalizeAnalyticsFilters(query),
+      scope,
+    );
+    const scopedWhere = this.getAnalyticsWhere(filters, scope);
     const deliveries = (await this.deliveriesRepository.find({
-      relations: [
-        'company',
-        'driver',
-        'driver.user',
-        'occurrences',
-        'finalization',
-        'details',
-      ],
+      ...(scopedWhere ? { where: scopedWhere } : {}),
+      relations: this.deliveryRelations,
       order: { id: 'DESC' },
     })).filter((delivery) => this.matchesAnalyticsFilters(delivery, filters));
     const totalDeliveries = deliveries.length;
@@ -486,16 +500,11 @@ export class DeliveriesService {
     };
   }
 
-  async getAlerts(): Promise<DeliveryOperationalAlert[]> {
+  async getAlerts(scope?: CompanyScope): Promise<DeliveryOperationalAlert[]> {
+    const scopedWhere = this.getScopedDeliveryWhere(scope);
     const deliveries = await this.deliveriesRepository.find({
-      relations: [
-        'company',
-        'driver',
-        'driver.user',
-        'occurrences',
-        'finalization',
-        'details',
-      ],
+      ...(scopedWhere ? { where: scopedWhere } : {}),
+      relations: this.deliveryRelations,
       order: { id: 'DESC' },
     });
     const now = new Date();
@@ -533,6 +542,52 @@ export class DeliveriesService {
       driverId: this.toNumberOrNull(query.driverId),
       status: query.status ?? null,
     };
+  }
+
+  private applyScopeToAnalyticsFilters(
+    filters: DeliveryAnalyticsFilters,
+    scope?: CompanyScope,
+  ): DeliveryAnalyticsFilters {
+    if (!scope || scope.isGlobal || !scope.companyId) {
+      return filters;
+    }
+
+    return { ...filters, companyId: scope.companyId };
+  }
+
+  private getAnalyticsWhere(
+    filters: DeliveryAnalyticsFilters,
+    scope?: CompanyScope,
+  ): { companyId: number } | null {
+    const scopedWhere = this.getScopedDeliveryWhere(scope);
+    if (scopedWhere) {
+      return scopedWhere;
+    }
+
+    if (filters.companyId) {
+      return { companyId: filters.companyId };
+    }
+
+    return null;
+  }
+
+  private getScopedDeliveryWhere(scope?: CompanyScope): { companyId: number } | null {
+    if (!scope || scope.isGlobal || !scope.companyId) {
+      return null;
+    }
+
+    return { companyId: scope.companyId };
+  }
+
+  private getScopedCompanyId(
+    scope: CompanyScope | undefined,
+    requestedCompanyId: number | undefined,
+  ): number | undefined {
+    if (scope && !scope.isGlobal) {
+      return scope.companyId ?? undefined;
+    }
+
+    return requestedCompanyId;
   }
 
   private matchesAnalyticsFilters(

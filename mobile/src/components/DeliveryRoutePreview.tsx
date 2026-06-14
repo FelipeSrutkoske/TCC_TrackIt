@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { AppCard } from './AppCard';
 import { PrimaryButton } from './PrimaryButton';
@@ -49,12 +49,6 @@ export function DeliveryRoutePreview({ delivery }: { delivery: Delivery }) {
     }
   }
 
-  useEffect(() => {
-    if (hasDestinationCoordinates) {
-      void loadCurrentCoordinates();
-    }
-  }, [hasDestinationCoordinates]);
-
   if (!hasDestinationCoordinates) {
     return (
       <AppCard>
@@ -98,7 +92,7 @@ export function DeliveryRoutePreview({ delivery }: { delivery: Delivery }) {
           <Text style={[styles.helper, { color: theme.colors.textMuted }]}> 
             {currentCoordinates
               ? 'Configure EXPO_PUBLIC_GOOGLE_MAPS_API_KEY para exibir o mapa aqui.'
-              : error ?? 'Calculando sua localizacao atual...'}
+              : error ?? 'Toque em Calcular rota para capturar sua localizacao atual.'}
           </Text>
         </View>
       )}

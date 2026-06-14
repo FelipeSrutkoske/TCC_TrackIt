@@ -88,7 +88,7 @@ describe('DeliveryFinalizationScreen', () => {
     expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
 
@@ -169,7 +169,7 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 
@@ -202,7 +202,7 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 
@@ -213,7 +213,7 @@ describe('DeliveryFinalizationScreen', () => {
         expect.objectContaining({
           deliveryId: 2,
           receiverName: 'Maria',
-          receiverDocument: '12345678901',
+          receiverDocument: '12345678909',
           receiverRelation: 'Irmao',
           latitude: -23.5,
           longitude: -46.6,
@@ -224,6 +224,68 @@ describe('DeliveryFinalizationScreen', () => {
     });
 
     expect(replace).toHaveBeenCalledWith('History');
+  });
+
+  it('masks receiver CPF while keeping only digits in the finalization payload', async () => {
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6 });
+    mockFinalizeDelivery.mockResolvedValueOnce({
+      id: 1,
+      deliveryId: 2,
+      receiverName: 'Maria',
+      signatureUrl: 'signature-data',
+      latitude: -23.5,
+      longitude: -46.6,
+      finalizedAt: '2026-01-01T10:00:00.000Z',
+    });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    const receiverDocumentInput = screen.getByLabelText('Documento do recebedor');
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(receiverDocumentInput, '12345678909');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
+    expect(screen.getByLabelText('Documento do recebedor').props.value).toBe('123.456.789-09');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    await waitFor(() => {
+      expect(mockFinalizeDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({ receiverDocument: '12345678909' }),
+        'token-1',
+      );
+    });
+  });
+
+  it('rejects invalid receiver CPF before requesting GPS coordinates', async () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '11111111111');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    expect(await screen.findByText('Informe um CPF valido ou RG com 9 digitos.')).toBeOnTheScreen();
+    expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
+    expect(mockFinalizeDelivery).not.toHaveBeenCalled();
   });
 
   it('ignores rapid repeated submit taps while a finalization is already in progress', async () => {
@@ -254,7 +316,7 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 

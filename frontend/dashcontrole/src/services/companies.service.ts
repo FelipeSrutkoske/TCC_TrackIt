@@ -37,16 +37,37 @@ export interface CompanyWithAnalytics extends CompanyOption {
   analytics: CompanyAnalytics;
 }
 
+export type CreateCompanyDto = {
+  corporateName: string;
+  tradeName?: string | null;
+  cnpj?: string | null;
+  contactEmail?: string | null;
+  phone?: string | null;
+  subscriptionStatus?: CompanyOption['subscriptionStatus'];
+};
+
+function withCompanyQuery(path: string, companyId?: number | null): string {
+  if (!companyId) return path;
+  return `${path}?companyId=${companyId}`;
+}
+
 export const companiesService = {
-  getAll(): Promise<CompanyOption[]> {
-    return apiFetch<CompanyOption[]>('/companies');
+  getAll(companyId?: number | null): Promise<CompanyOption[]> {
+    return apiFetch<CompanyOption[]>(withCompanyQuery('/companies', companyId));
   },
 
-  getAnalytics(): Promise<CompanyWithAnalytics[]> {
-    return apiFetch<CompanyWithAnalytics[]>('/companies/analytics');
+  getAnalytics(companyId?: number | null): Promise<CompanyWithAnalytics[]> {
+    return apiFetch<CompanyWithAnalytics[]>(withCompanyQuery('/companies/analytics', companyId));
   },
 
   getByIdAnalytics(id: number): Promise<CompanyWithAnalytics> {
     return apiFetch<CompanyWithAnalytics>(`/companies/${id}/analytics`);
+  },
+
+  create(data: CreateCompanyDto): Promise<CompanyOption> {
+    return apiFetch<CompanyOption>('/companies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 };

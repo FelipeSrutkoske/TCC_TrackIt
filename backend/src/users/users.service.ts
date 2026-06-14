@@ -1,24 +1,89 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { TipoUsuario, User } from './entities/user.entity';
+import { Driver } from './entities/driver.entity';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { resolveCompanyScope } from '../common/company-scope';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Driver)
+    private readonly driversRepository: Repository<Driver>,
   ) {}
 
-  async create(data: Partial<User> & { senha: string }): Promise<User> {
+  async create(data: CreateUserDto): Promise<User> {
+    const { driverProfile, ...userData } = data;
+    const normalizedUserData = this.normalizeUserData(userData);
+
+    this.validateUserRules({ ...normalizedUserData, driverProfile }, 'create');
+
     const hash = await bcrypt.hash(data.senha, 10);
-    const user = this.usersRepository.create({ ...data, senha: hash });
-    return this.usersRepository.save(user);
+    const user = this.usersRepository.create({ ...normalizedUserData, senha: hash });
+    const savedUser = await this.usersRepository.save(user);
+
+    if (normalizedUserData.tipoUsuario === TipoUsuario.MOTORISTA && driverProfile) {
+      const savedDriver = await this.driversRepository.save(
+        this.driversRepository.create({
+          userId: savedUser.id,
+          cnh: driverProfile.cnh,
+          placaVeiculo: driverProfile.placaVeiculo ?? undefined,
+          tipoVeiculo: driverProfile.tipoVeiculo ?? undefined,
+          disponivel: driverProfile.disponivel ?? true,
+        }),
+      );
+
+      savedUser.driverProfile = savedDriver;
+    }
+
+    return this.withoutPassword(savedUser);
   }
 
-  findAll(): Promise<User[]> {
-    return this.usersRepository.find({ relations: ['driverProfile'] });
+  async createScoped(
+    data: CreateUserDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<User> {
+    if (
+      currentUser.tipoUsuario !== TipoUsuario.ADMIN &&
+      data.tipoUsuario !== TipoUsuario.MOTORISTA
+    ) {
+      throw new ForbiddenException('Usuario sem permissao para criar este tipo de usuario');
+    }
+
+    const scope = resolveCompanyScope(currentUser, data.companyId);
+    const companyId = scope.isGlobal ? data.companyId ?? null : scope.companyId;
+    const scopedData =
+      companyId === null ? { ...data, companyId: undefined } : { ...data, companyId };
+
+    return this.create(scopedData);
+  }
+
+  async findAll(): Promise<User[]> {
+    const users = await this.usersRepository.find({
+      relations: ['driverProfile'],
+    });
+    return users.map((user) => this.withoutPassword(user));
+  }
+
+  async findAllScoped(currentUser: AuthenticatedUser): Promise<User[]> {
+    const scope = resolveCompanyScope(currentUser);
+    const users = await this.usersRepository.find({
+      where: scope.isGlobal ? {} : { companyId: scope.companyId ?? undefined },
+      relations: ['driverProfile', 'company'],
+    });
+
+    return users.map((user) => this.withoutPassword(user));
   }
 
   async findOne(id: number): Promise<User> {
@@ -27,7 +92,7 @@ export class UsersService {
       relations: ['driverProfile'],
     });
     if (!user) throw new NotFoundException(`Usuário #${id} não encontrado`);
-    return user;
+    return this.withoutPassword(user);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -48,20 +113,99 @@ export class UsersService {
     return (user?.driverProfile as { id?: number } | null)?.id ?? null;
   }
 
-  async update(
-    id: number,
-    data: Partial<User> & { senha?: string },
-  ): Promise<User> {
+  async update(id: number, data: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    if (data.senha) {
-      data.senha = await bcrypt.hash(data.senha, 10);
+    const { driverProfile, ...userData } = data;
+    const effectiveUserData = this.normalizeUserData({ ...user, ...userData });
+    const effectiveDriverProfile = {
+      cnh: driverProfile?.cnh || user.driverProfile?.cnh,
+    };
+
+    this.validateUserRules(
+      { ...effectiveUserData, driverProfile: effectiveDriverProfile },
+      'update',
+    );
+
+    if (userData.senha) {
+      userData.senha = await bcrypt.hash(userData.senha, 10);
     }
-    Object.assign(user, data);
-    return this.usersRepository.save(user);
+    if (effectiveUserData.tipoUsuario === TipoUsuario.ADMIN) {
+      (userData as { companyId?: number | null }).companyId = null;
+    }
+    Object.assign(user, userData);
+    const savedUser = await this.usersRepository.save(user);
+    return this.withoutPassword(savedUser);
   }
 
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
     await this.usersRepository.remove(user);
+  }
+
+  private withoutPassword(user: User): User {
+    const { senha: _senha, ...safeUser } = user;
+    return safeUser as User;
+  }
+
+  private validateUserRules(
+    data: {
+      tipoUsuario?: TipoUsuario;
+      companyId?: number | null;
+      driverProfile?: { cnh?: string | null } | null;
+    },
+    operation: 'create' | 'update',
+  ): void {
+    if (data.tipoUsuario === TipoUsuario.ADMIN) {
+      return;
+    }
+
+    const hasValidCompanyId =
+      typeof data.companyId === 'number' &&
+      Number.isInteger(data.companyId) &&
+      data.companyId >= 1;
+
+    if (!hasValidCompanyId) {
+      if (data.tipoUsuario === TipoUsuario.DASHBOARD) {
+        throw new BadRequestException('Informe a empresa para criar um usuário dashboard');
+      }
+
+      if (data.tipoUsuario === TipoUsuario.MOTORISTA) {
+        throw new BadRequestException('Informe a empresa para criar um motorista');
+      }
+    }
+
+    if (data.tipoUsuario === TipoUsuario.DASHBOARD && data.companyId == null) {
+      throw new BadRequestException('Informe a empresa para criar um usuário dashboard');
+    }
+
+    if (data.tipoUsuario === TipoUsuario.MOTORISTA && data.companyId == null) {
+      throw new BadRequestException('Informe a empresa para criar um motorista');
+    }
+
+    if (
+      operation === 'create' &&
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      !data.driverProfile?.cnh
+    ) {
+      throw new BadRequestException('Informe a CNH para criar um motorista');
+    }
+
+    if (
+      operation === 'update' &&
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      !data.driverProfile?.cnh
+    ) {
+      throw new BadRequestException('Informe a CNH para criar um motorista');
+    }
+  }
+
+  private normalizeUserData<T extends { tipoUsuario?: TipoUsuario; companyId?: number | null }>(
+    data: T,
+  ): T {
+    if (data.tipoUsuario === TipoUsuario.ADMIN) {
+      return { ...data, companyId: null };
+    }
+
+    return data;
   }
 }

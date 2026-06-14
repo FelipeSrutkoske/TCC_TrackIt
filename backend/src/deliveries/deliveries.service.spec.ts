@@ -149,6 +149,35 @@ describe('DeliveriesService', () => {
       expect(result.details).toHaveLength(1);
     });
 
+    it('deve criar entrega na empresa do escopo ignorando empresa enviada no payload', async () => {
+      const dto = {
+        destinationAddress: 'Rua Escopo',
+        empresaId: 99,
+        detalhesEntrega: [
+          {
+            descricao: 'Caixa',
+            quantidade: 1,
+          },
+        ],
+      };
+      mockRepository.save.mockResolvedValueOnce({
+        id: 12,
+        destinationAddress: 'Rua Escopo',
+        companyId: 1,
+      });
+      mockRepository.findOne.mockResolvedValueOnce({
+        id: 12,
+        destinationAddress: 'Rua Escopo',
+        companyId: 1,
+      });
+
+      await service.create(dto as any, { companyId: 1, isGlobal: false });
+
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: 1 }),
+      );
+    });
+
     it('deve rejeitar criacao sem detalhes da entrega', async () => {
       const dto = { destinationAddress: 'Rua A', motoristaId: 4 };
 
@@ -160,10 +189,32 @@ describe('DeliveriesService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('deve listar entregas apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      await service.findAll({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
+    });
+  });
+
   describe('findOne', () => {
     it('deve lancar NotFoundException se entrega nao existir', async () => {
       mockRepository.findOne.mockResolvedValue(null);
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('deve buscar entrega respeitando empresa escopada', async () => {
+      mockRepository.findOne.mockResolvedValue({ id: 99, companyId: 1 });
+
+      await service.findOne(99, { companyId: 1, isGlobal: false });
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 99, companyId: 1 } }),
+      );
     });
   });
 
@@ -183,6 +234,25 @@ describe('DeliveriesService', () => {
         status: StatusEntrega.EM_ROTA,
       });
       expect(result.status).toBe(StatusEntrega.EM_ROTA);
+    });
+
+    it('deve atualizar entrega sem permitir trocar empresa fora do escopo', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 2,
+        companyId: 1,
+        status: StatusEntrega.AGUARDANDO_MOTORISTA,
+      });
+
+      await service.update(
+        2,
+        { empresaId: 99, status: StatusEntrega.EM_ROTA } as any,
+        { companyId: 1, isGlobal: false },
+      );
+
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ companyId: 1 }),
+      );
     });
   });
 
@@ -213,6 +283,17 @@ describe('DeliveriesService', () => {
         cancelados: 1,
       });
       expect(mockRepository.count).toHaveBeenCalledTimes(5);
+    });
+
+    it('deve retornar estatisticas apenas da empresa escopada', async () => {
+      mockRepository.count.mockResolvedValue(0);
+
+      await service.getStats({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.count).toHaveBeenCalledWith({ where: { companyId: 1 } });
+      expect(mockRepository.count).toHaveBeenCalledWith({
+        where: { companyId: 1, status: StatusEntrega.ENTREGUE },
+      });
     });
   });
 
@@ -358,6 +439,20 @@ describe('DeliveriesService', () => {
       );
     });
 
+    it('deve calcular analytics apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      const analytics = await service.getAnalytics(
+        { companyId: '99' },
+        { companyId: 1, isGlobal: false },
+      );
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
+      expect(analytics.filters.companyId).toBe(1);
+    });
+
     it('deve retornar zeros e arrays estaveis quando nao houver dados', async () => {
       mockRepository.find.mockResolvedValue([]);
 
@@ -426,6 +521,16 @@ describe('DeliveriesService', () => {
         ]),
       );
       expect(alerts.filter((alert) => alert.id === 'delivery-31-gps-divergente')).toHaveLength(1);
+    });
+
+    it('deve gerar alertas apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      await service.getAlerts({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
     });
   });
 

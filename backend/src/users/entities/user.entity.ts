@@ -3,9 +3,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  JoinColumn,
+  ManyToOne,
   OneToOne,
 } from 'typeorm';
 import type { Driver } from './driver.entity';
+import type { Company } from '../../deliveries/entities/company.entity';
 
 export enum TipoUsuario {
   ADMIN = 'ADMIN',
@@ -36,6 +39,13 @@ export class User {
 
   @Column({ default: true })
   ativo: boolean;
+
+  @Column({ name: 'empresa_id', type: 'int', nullable: true })
+  companyId: number | null;
+
+  @ManyToOne('Company', { nullable: true })
+  @JoinColumn({ name: 'empresa_id' })
+  company: Company | null;
 
   @CreateDateColumn({ name: 'data_criacao' })
   dataCriacao: Date;

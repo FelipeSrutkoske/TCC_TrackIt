@@ -28,6 +28,6 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   await app.listen(3001);
-  console.log('🚀 TrackIt API rodando em http://localhost:3001');
+  Logger.log('TrackIt API rodando na porta 3001', 'Bootstrap');
 }
 bootstrap();

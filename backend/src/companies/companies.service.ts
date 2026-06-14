@@ -6,6 +6,8 @@ import {
   CompanySubscriptionStatus,
 } from '../deliveries/entities/company.entity';
 import { Delivery, StatusEntrega } from '../deliveries/entities/delivery.entity';
+import { CreateCompanyDto } from './dto/create-company.dto';
+import type { CompanyScope } from '../common/company-scope';
 
 interface CompanyAnalytics {
   totalDeliveries: number;
@@ -27,15 +29,35 @@ export class CompaniesService {
     private readonly companiesRepository: Repository<Company>,
   ) {}
 
-  findAll(): Promise<Company[]> {
+  async create(data: CreateCompanyDto): Promise<Company> {
+    const company = this.companiesRepository.create({
+      corporateName: data.corporateName,
+      tradeName: data.tradeName ?? undefined,
+      cnpj: data.cnpj ?? undefined,
+      contactEmail: data.contactEmail ?? undefined,
+      phone: data.phone ?? undefined,
+      subscriptionStatus:
+        data.subscriptionStatus ?? CompanySubscriptionStatus.ATIVO,
+      registeredAt: new Date(),
+    });
+
+    return this.companiesRepository.save(company);
+  }
+
+  findAll(scope?: CompanyScope): Promise<Company[]> {
     return this.companiesRepository.find({
-      where: { subscriptionStatus: CompanySubscriptionStatus.ATIVO },
+      where: {
+        ...(this.getScopedCompanyWhere(scope) ?? {}),
+        subscriptionStatus: CompanySubscriptionStatus.ATIVO,
+      },
       order: { corporateName: 'ASC' },
     });
   }
 
-  async findAllWithAnalytics(): Promise<CompanyWithAnalytics[]> {
+  async findAllWithAnalytics(scope?: CompanyScope): Promise<CompanyWithAnalytics[]> {
+    const scopedWhere = this.getScopedCompanyWhere(scope);
     const companies = await this.companiesRepository.find({
+      ...(scopedWhere ? { where: scopedWhere } : {}),
       relations: [
         'deliveries',
         'deliveries.occurrences',
@@ -49,9 +71,10 @@ export class CompaniesService {
     return companies.map((company) => this.withAnalytics(company));
   }
 
-  async findAnalytics(id: number): Promise<CompanyWithAnalytics> {
+  async findAnalytics(id: number, scope?: CompanyScope): Promise<CompanyWithAnalytics> {
+    const scopedWhere = this.getScopedCompanyWhere(scope);
     const company = await this.companiesRepository.findOne({
-      where: { id },
+      where: scopedWhere ?? { id },
       relations: [
         'deliveries',
         'deliveries.occurrences',
@@ -66,6 +89,14 @@ export class CompaniesService {
     }
 
     return this.withAnalytics(company);
+  }
+
+  private getScopedCompanyWhere(scope?: CompanyScope): { id: number } | null {
+    if (!scope || scope.isGlobal || !scope.companyId) {
+      return null;
+    }
+
+    return { id: scope.companyId };
   }
 
   private withAnalytics(company: Company): CompanyWithAnalytics {

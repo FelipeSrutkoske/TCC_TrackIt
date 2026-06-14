@@ -195,17 +195,22 @@ export interface DeliveryProofEmailHistoryItem {
   dataEnvio?: string | null;
 }
 
+function withCompanyQuery(path: string, companyId?: number | null): string {
+  if (!companyId) return path;
+  return `${path}?companyId=${companyId}`;
+}
+
 export const deliveriesService = {
-  getAll(): Promise<Entrega[]> {
-    return apiFetch<Entrega[]>('/deliveries');
+  getAll(companyId?: number | null): Promise<Entrega[]> {
+    return apiFetch<Entrega[]>(withCompanyQuery('/deliveries', companyId));
   },
 
   getById(id: number): Promise<Entrega> {
     return apiFetch<Entrega>(`/deliveries/${id}`);
   },
 
-  getStats(): Promise<DeliveryStats> {
-    return apiFetch<DeliveryStats>('/deliveries/stats');
+  getStats(companyId?: number | null): Promise<DeliveryStats> {
+    return apiFetch<DeliveryStats>(withCompanyQuery('/deliveries/stats', companyId));
   },
 
   getAnalytics(query: DeliveryAnalyticsQuery = {}): Promise<DeliveryAnalyticsResponse> {
@@ -223,8 +228,8 @@ export const deliveriesService = {
     );
   },
 
-  getAlerts(): Promise<DeliveryOperationalAlert[]> {
-    return apiFetch<DeliveryOperationalAlert[]>('/deliveries/alerts');
+  getAlerts(companyId?: number | null): Promise<DeliveryOperationalAlert[]> {
+    return apiFetch<DeliveryOperationalAlert[]>(withCompanyQuery('/deliveries/alerts', companyId));
   },
 
   getProofEmails(id: number): Promise<DeliveryProofEmailHistoryItem[]> {

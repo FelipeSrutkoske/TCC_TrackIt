@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+
+test('pagina administrativo usa filtro de empresa para admin e modais para acoes', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /title="Administrativo"/);
+  assert.match(source, /authService\.getUser\(\)/);
+  assert.match(source, /empresaSelecionada/);
+  assert.match(source, /modalEmpresaAberto/);
+  assert.match(source, /modalUsuarioAberto/);
+  assert.match(source, /modalMotoristaAberto/);
+  assert.match(source, /isAdmin/);
+  assert.match(source, /companiesService\.create/);
+  assert.match(source, /usersService\.create/);
+  assert.doesNotMatch(source, /companyId:\s*1/);
+  assert.match(source, /driverProfile/);
+  assert.match(source, /CNH/);
+  assert.match(source, /placaVeiculo/);
+  assert.match(source, /Cadastrar cliente/);
+  assert.match(source, /Criar usuario/);
+  assert.doesNotMatch(source, /<form className="rounded-2xl[\s\S]+Cadastrar cliente[\s\S]+<form className="rounded-2xl[\s\S]+Criar usuario/);
+});

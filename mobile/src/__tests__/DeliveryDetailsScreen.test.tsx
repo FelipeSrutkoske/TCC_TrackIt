@@ -42,6 +42,29 @@ describe('DeliveryDetailsScreen', () => {
     mockGetCurrentCoordinates.mockReset();
   });
 
+  it('does not request GPS automatically when rendering the route preview', () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryDetailsScreen
+          route={{
+            key: 'DeliveryDetails-1',
+            name: 'DeliveryDetails',
+            params: {
+              delivery: {
+                ...deliveryFixture,
+                latitudeDestino: '-24.053378',
+                longitudeDestino: '-52.376477',
+              },
+            },
+          }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Calcular rota' })).toBeOnTheScreen();
+  });
+
   it('starts the delivery with GPS without opening maps from the main button', async () => {
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5505, longitude: -46.6333 });
     mockStartDelivery.mockResolvedValueOnce({

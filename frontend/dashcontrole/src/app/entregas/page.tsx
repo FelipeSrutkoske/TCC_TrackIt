@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { DeliveryProofModal } from "../components/DeliveryProofModal";
+import { useToast } from "@/contexts/ToastContext";
 import { deliveriesService, Entrega, StatusEntrega } from "@/services/deliveries.service";
 import { usersService, Usuario } from "@/services/users.service";
 
@@ -27,8 +28,10 @@ const CONFIG_STATUS_ENTREGA: Record<
   COM_OCORRENCIA:       { label: "Ocorrência", cor: "bg-orange-100 text-orange-800 border-orange-300", ponto: "bg-orange-500" },
 };
 
+const MAX_MOTORISTAS_VISIVEIS = 50;
 
 export default function EntregasPage() {
+  const { addToast } = useToast();
   const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,7 @@ export default function EntregasPage() {
   const [modalMotoristasAberto, setModalMotoristasAberto] = useState(false);
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [filtro, setFiltro] = useState("");
+  const [filtroMotorista, setFiltroMotorista] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const carregarDados = useCallback(async () => {
@@ -71,18 +75,24 @@ export default function EntregasPage() {
   });
 
   async function vincularMotorista(motorista: Usuario) {
-    if (!entregaSelecionada || !motorista.driverProfile) return;
+    if (
+      !entregaSelecionada ||
+      !motorista.driverProfile ||
+      entregaSelecionada.status !== "AGUARDANDO_MOTORISTA"
+    ) return;
     try {
       setSalvando(true);
+      // Vincular motorista nao inicia a rota: o status EM_ROTA depende do GPS inicial capturado no mobile.
       const atualizada = await deliveriesService.update(entregaSelecionada.id, {
         motoristaId: motorista.driverProfile.id,
-        status: "EM_ROTA",
+        status: "AGUARDANDO_MOTORISTA",
       });
       setEntregas((prev) => prev.map((e) => (e.id === atualizada.id ? atualizada : e)));
       setEntregaSelecionada(atualizada);
       setModalMotoristasAberto(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao vincular");
+      const errorMessage = err instanceof Error ? err.message : "Erro ao vincular";
+      addToast(errorMessage, "error");
     } finally {
       setSalvando(false);
     }
@@ -91,6 +101,18 @@ export default function EntregasPage() {
   function getNomeMotorista(entrega: Entrega): string | null {
     return entrega.driver?.user?.nome ?? null;
   }
+
+  const podeVincularMotorista = entregaSelecionada?.status === "AGUARDANDO_MOTORISTA";
+  const motoristasFiltrados = usuarios.filter((usuario) => {
+    const texto = filtroMotorista.toLowerCase();
+
+    return (
+      usuario.nome.toLowerCase().includes(texto) ||
+      usuario.email.toLowerCase().includes(texto) ||
+      (usuario.driverProfile?.placaVeiculo?.toLowerCase().includes(texto) ?? false)
+    );
+  });
+  const motoristasVisiveis = motoristasFiltrados.slice(0, MAX_MOTORISTAS_VISIVEIS);
 
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
 
@@ -194,7 +216,7 @@ export default function EntregasPage() {
                   <p className="text-white text-sm">{getNomeMotorista(entregaSelecionada) || "Nenhum"}</p>
                </div>
                 <button 
-                  disabled={salvando}
+                  disabled={salvando || !podeVincularMotorista}
                   onClick={() => setModalMotoristasAberto(true)}
                   className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-60"
                 >
@@ -218,9 +240,21 @@ export default function EntregasPage() {
         description="Escolha um condutor disponível na lista."
       >
         <div className="space-y-2">
-           {usuarios.map((u) => (
-             <button
-               key={u.id}
+           <input
+             className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#4f654b]"
+             onChange={(event) => setFiltroMotorista(event.target.value)}
+             placeholder="Filtrar motorista por nome, email ou placa..."
+             type="text"
+             value={filtroMotorista}
+           />
+           {motoristasFiltrados.length > MAX_MOTORISTAS_VISIVEIS ? (
+             <p className="text-[11px] font-medium text-zinc-400">
+               Mostrando {MAX_MOTORISTAS_VISIVEIS} de {motoristasFiltrados.length} motoristas. Use o filtro para refinar.
+             </p>
+           ) : null}
+           {motoristasVisiveis.map((u) => (
+              <button
+                key={u.id}
                onClick={() => vincularMotorista(u)}
                className="w-full text-left p-4 rounded-xl border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 transition"
              >
@@ -231,7 +265,7 @@ export default function EntregasPage() {
         </div>
       </Modal>
 
-      {entregaSelecionada && (
+      {modalComprovanteAberto && entregaSelecionada && (
         <DeliveryProofModal
           isOpen={modalComprovanteAberto}
           onClose={() => setModalComprovanteAberto(false)}

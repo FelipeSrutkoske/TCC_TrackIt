@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
   },
   {
     href: "/empresas",
-    label: "Empresas",
+    label: "Administrativo",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
         <path fillRule="evenodd" d="M3 3.75A.75.75 0 013.75 3h16.5a.75.75 0 01.75.75v16.5a.75.75 0 01-.75.75h-16.5A.75.75 0 013 20.25V3.75zm3 3A.75.75 0 016.75 6h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 016 6.75zm0 4A.75.75 0 016.75 10h2.5a.75.75 0 010 1.5h-2.5A.75.75 0 016 10.75zm.75 3.25a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5zM13.5 6.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75zm.75 3.25a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3zm-.75 4.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75z" clipRule="evenodd" />

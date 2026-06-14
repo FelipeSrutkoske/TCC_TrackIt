@@ -13,6 +13,7 @@ export class AuthService {
   async validateUser(email: string, senha: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    if (!user.ativo) throw new UnauthorizedException('Credenciais inválidas');
 
     let senhaValida = false;
 
@@ -22,14 +23,6 @@ export class AuthService {
         senhaValida = await bcrypt.compare(senha, user.senha);
       } catch (e) {
         senhaValida = false;
-      }
-    } else {
-      // Comparação direta para senhas em texto plano (legado)
-      senhaValida = user.senha === senha;
-
-      // Se validou em texto plano, vamos atualizar para hash automaticamente
-      if (senhaValida) {
-        await this.usersService.update(user.id, { senha });
       }
     }
 
@@ -44,7 +37,10 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tipoUsuario: user.tipoUsuario,
+      companyId: user.companyId ?? null,
     };
+    const driverProfileId = (user.driverProfile as { id?: number } | null)?.id;
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -52,7 +48,8 @@ export class AuthService {
         nome: user.nome,
         email: user.email,
         tipoUsuario: user.tipoUsuario,
-        driverProfileId: (user.driverProfile as { id?: number } | null)?.id,
+        companyId: user.companyId ?? null,
+        ...(driverProfileId ? { driverProfileId } : {}),
       },
     };
   }

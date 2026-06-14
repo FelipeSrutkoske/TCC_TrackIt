@@ -15,6 +15,7 @@ import { RootStackParamList } from '../navigation/types';
 import { finalizeDelivery } from '../services/finalizations.service';
 import { useAppTheme } from '../theme/AppThemeProvider';
 import { Coordinates, getCurrentCoordinates } from '../utils/location';
+import { isValidCpf, maskCpf, onlyDigits } from '../utils/masks';
 import { prepareUploadPhoto } from '../utils/uploadPhoto';
 
 const LOCATION_PROOF_MESSAGE =
@@ -84,7 +85,7 @@ export function DeliveryFinalizationScreen({
     }
 
     const trimmedReceiverName = receiverName.trim();
-    const documentDigits = receiverDocument.replace(/\D/g, '');
+    const documentDigits = onlyDigits(receiverDocument);
     const trimmedReceiverRelation = receiverRelation.trim();
 
     if (!trimmedReceiverName) {
@@ -92,8 +93,11 @@ export function DeliveryFinalizationScreen({
       return;
     }
 
-    if (documentDigits.length !== 9 && documentDigits.length !== 11) {
-      setError('Informe um RG com 9 digitos ou CPF com 11 digitos.');
+    if (
+      (documentDigits.length !== 9 && documentDigits.length !== 11) ||
+      (documentDigits.length === 11 && !isValidCpf(documentDigits))
+    ) {
+      setError('Informe um CPF valido ou RG com 9 digitos.');
       return;
     }
 
@@ -209,7 +213,7 @@ export function DeliveryFinalizationScreen({
           <TextInput
             accessibilityLabel="Documento do recebedor"
             keyboardType="number-pad"
-            onChangeText={setReceiverDocument}
+            onChangeText={(value) => setReceiverDocument(maskReceiverDocument(value))}
             placeholder="CPF com 11 digitos ou RG com 9 digitos"
             placeholderTextColor={theme.colors.textMuted}
             style={[
@@ -369,4 +373,10 @@ function formatDateTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function maskReceiverDocument(value: string) {
+  const digits = onlyDigits(value);
+
+  return digits.length > 9 ? maskCpf(digits) : digits;
 }
