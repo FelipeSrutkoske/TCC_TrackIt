@@ -61,7 +61,7 @@ export function DeliverySignaturePreview({ signatureUrl }: { signatureUrl?: stri
 
   if (parsedSignature) {
     return (
-      <div className="flex h-full w-full items-center justify-center pt-6 text-zinc-100">
+      <div className="flex h-full w-full items-center justify-center pt-6">
         <svg
           aria-label="Assinatura do recebedor"
           className="h-full max-h-full w-full max-w-full"
@@ -74,7 +74,7 @@ export function DeliverySignaturePreview({ signatureUrl }: { signatureUrl?: stri
               fill="none"
               key={`signature-stroke-${index}`}
               points={stroke.map((point) => `${point.x},${point.y}`).join(' ')}
-              stroke="currentColor"
+              stroke="#111827"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="4"

@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
 import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
 import { AppScreen } from '../components/AppScreen';
-import { InfoRow } from '../components/InfoRow';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
 import { SignaturePadField } from '../components/SignaturePadField';
@@ -25,7 +24,7 @@ type DeliveryFinalizationScreenProps = {
   route: RouteProp<RootStackParamList, 'DeliveryFinalization'>;
   navigation?: Pick<
     NativeStackNavigationProp<RootStackParamList, 'DeliveryFinalization'>,
-    'replace'
+    'reset'
   >;
 };
 
@@ -147,7 +146,7 @@ export function DeliveryFinalizationScreen({
         session.accessToken,
       );
 
-      navigation?.replace?.('History');
+      navigation?.reset?.({ index: 0, routes: [{ name: 'History' }] });
     } catch (nextError) {
       const message =
         nextError instanceof Error ? nextError.message : 'Nao foi possivel finalizar a entrega';
@@ -173,17 +172,17 @@ export function DeliveryFinalizationScreen({
         testID="delivery-finalization-scroll"
       >
         <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
-          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Encerramento operacional</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Baixa da entrega #{route.params.delivery.id}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Fechar entrega com validacao completa</Text>
+          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Empresa cliente</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>
+            {route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`}
+          </Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Entrega #{route.params.delivery.id}</Text>
+          <View style={styles.heroRows}>
+            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Criada em: {formatDateTime(route.params.delivery.createdAt)}</Text>
+            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Destino: {route.params.delivery.destinationAddress}</Text>
+            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Status atual: Em rota</Text>
+          </View>
         </View>
-
-        <AppCard>
-          <InfoRow label="Empresa cliente" value={route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`} />
-          <InfoRow label="Criada em" value={formatDateTime(route.params.delivery.createdAt)} />
-          <InfoRow label="Destino" value={route.params.delivery.destinationAddress} />
-          <InfoRow label="Status atual" value="Em rota" />
-        </AppCard>
 
         <DeliveryDetailsSummary
           details={route.params.delivery.details}
@@ -318,6 +317,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 22,
+  },
+  heroRows: {
+    gap: 8,
+  },
+  heroInfo: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   label: {
     fontSize: 14,

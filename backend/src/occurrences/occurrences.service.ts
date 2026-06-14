@@ -12,6 +12,7 @@ import { CreateOccurrenceDto } from './dto/create-occurrence.dto';
 import { OccurrenceQueryDto } from './dto/occurrence-query.dto';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
+import type { CompanyScope } from '../common/company-scope';
 
 const tiposOcorrenciaComFotoObrigatoria = new Set<TipoOcorrencia>([
   TipoOcorrencia.DESTINATARIO_AUSENTE,
@@ -129,6 +130,7 @@ export class OccurrencesService {
 
   async findAllWithSummary(
     query: OccurrenceQueryDto = {},
+    scope?: CompanyScope,
   ): Promise<OccurrencesWithSummaryResponse> {
     const occurrences = await this.occurrencesRepository.find({
       relations: [
@@ -141,7 +143,7 @@ export class OccurrencesService {
       order: { dataHora: 'DESC' },
     });
     const filtered = occurrences.filter((occurrence) =>
-      this.matchesFilters(occurrence, query),
+      this.matchesFilters(occurrence, query, scope),
     );
     const byType = this.groupByType(filtered);
 
@@ -188,11 +190,12 @@ export class OccurrencesService {
   private matchesFilters(
     occurrence: Occurrence,
     query: OccurrenceQueryDto,
+    scope?: CompanyScope,
   ): boolean {
     const dataHora = this.toDate(occurrence.dataHora);
     const startDate = this.toDate(query.startDate);
     const endDate = this.toDate(query.endDate);
-    const companyId = this.toNumber(query.companyId);
+    const companyId = scope?.companyId ?? this.toNumber(query.companyId);
     const driverId = this.toNumber(query.driverId);
     const deliveryId = this.toNumber(query.deliveryId);
 

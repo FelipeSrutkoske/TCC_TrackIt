@@ -266,6 +266,10 @@ export class DeliveriesService {
         },
         {
           driverId,
+          status: StatusEntrega.COM_OCORRENCIA,
+        },
+        {
+          driverId,
           status: StatusEntrega.CANCELADO,
         },
       ],

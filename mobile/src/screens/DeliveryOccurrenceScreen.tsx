@@ -127,7 +127,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
         session.accessToken,
       );
 
-      navigation?.replace('History');
+      navigation?.reset({ index: 0, routes: [{ name: 'History' }] });
     } catch (nextError) {
       setError(
         nextError instanceof Error ? nextError.message : 'Nao foi possivel registrar a ocorrencia',

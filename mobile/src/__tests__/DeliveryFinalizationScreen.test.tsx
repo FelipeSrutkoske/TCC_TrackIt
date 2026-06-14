@@ -83,8 +83,8 @@ describe('DeliveryFinalizationScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Encerramento operacional')).toBeOnTheScreen();
-    expect(screen.getByText('Fechar entrega com validacao completa')).toBeOnTheScreen();
+    expect(screen.queryByText('Encerramento operacional')).toBeNull();
+    expect(screen.queryByText('Fechar entrega com validacao completa')).toBeNull();
     expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
@@ -180,7 +180,7 @@ describe('DeliveryFinalizationScreen', () => {
   });
 
   it('finalizes the delivery with signature and GPS coordinates', async () => {
-    const replace = jest.fn();
+    const reset = jest.fn();
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6 });
     mockFinalizeDelivery.mockResolvedValueOnce({
       id: 1,
@@ -195,7 +195,7 @@ describe('DeliveryFinalizationScreen', () => {
     render(
       <AppThemeProvider>
         <DeliveryFinalizationScreen
-          navigation={{ replace }}
+          navigation={{ reset } as never}
           route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
         />
       </AppThemeProvider>,
@@ -223,7 +223,7 @@ describe('DeliveryFinalizationScreen', () => {
       );
     });
 
-    expect(replace).toHaveBeenCalledWith('History');
+    expect(reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'History' }] });
   });
 
   it('masks receiver CPF while keeping only digits in the finalization payload', async () => {

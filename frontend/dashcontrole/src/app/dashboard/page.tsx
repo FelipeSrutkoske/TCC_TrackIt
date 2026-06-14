@@ -82,11 +82,13 @@ function formatPercent(value: number): string {
 }
 
 function formatMinutes(value: number): string {
-  if (!value) return "0 min";
-  if (value < 60) return `${value} min`;
+  const roundedValue = Math.round(value);
 
-  const hours = Math.floor(value / 60);
-  const minutes = value % 60;
+  if (!roundedValue) return "0 min";
+  if (roundedValue < 60) return `${roundedValue} min`;
+
+  const hours = Math.floor(roundedValue / 60);
+  const minutes = roundedValue % 60;
   return minutes ? `${hours}h ${minutes}min` : `${hours}h`;
 }
 

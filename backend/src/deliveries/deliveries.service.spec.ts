@@ -576,6 +576,7 @@ describe('DeliveriesService', () => {
     it('deve retornar historico e metricas do motorista autenticado', async () => {
       const completedDeliveries = [
         { id: 3, driverId: 14, status: StatusEntrega.ENTREGUE },
+        { id: 5, driverId: 14, status: StatusEntrega.COM_OCORRENCIA },
         { id: 4, driverId: 14, status: StatusEntrega.CANCELADO },
       ];
       mockUsersService.resolveDriverProfileId.mockResolvedValue(14);
@@ -597,6 +598,10 @@ describe('DeliveriesService', () => {
           {
             driverId: 14,
             status: StatusEntrega.ENTREGUE,
+          },
+          {
+            driverId: 14,
+            status: StatusEntrega.COM_OCORRENCIA,
           },
           {
             driverId: 14,

@@ -10,7 +10,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
-import { DeliveryProofModal } from "../components/DeliveryProofModal";
 import { useToast } from "@/contexts/ToastContext";
 import { deliveriesService, Entrega, StatusEntrega } from "@/services/deliveries.service";
 import { usersService, Usuario } from "@/services/users.service";
@@ -38,7 +37,6 @@ export default function EntregasPage() {
 
   const [entregaSelecionada, setEntregaSelecionada] = useState<Entrega | null>(null);
   const [modalMotoristasAberto, setModalMotoristasAberto] = useState(false);
-  const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [filtro, setFiltro] = useState("");
   const [filtroMotorista, setFiltroMotorista] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -102,7 +100,6 @@ export default function EntregasPage() {
     return entrega.driver?.user?.nome ?? null;
   }
 
-  const podeVincularMotorista = entregaSelecionada?.status === "AGUARDANDO_MOTORISTA";
   const motoristasFiltrados = usuarios.filter((usuario) => {
     const texto = filtroMotorista.toLowerCase();
 
@@ -160,13 +157,9 @@ export default function EntregasPage() {
             return (
               <article
                 key={entrega.id}
-                className="text-left w-full rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                className="text-left w-full rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm hover:shadow-md transition-all"
               >
-                <button
-                  className="w-full text-left"
-                  onClick={() => setEntregaSelecionada(entrega)}
-                  type="button"
-                >
+                <div className="w-full text-left">
                   <div className="flex justify-between items-start mb-3">
                     <span className="text-xs font-bold text-[#8a9488]">ENTREGA #{entrega.id}</span>
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${cfg.cor}`}>
@@ -180,16 +173,30 @@ export default function EntregasPage() {
                     </span>
                   ) : null}
                   <div className="pt-3 border-t border-[#e3e8e3] flex justify-between items-center">
-                     <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
-                     <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
-                  </div>
-                </button>
-                <Link
-                  className="mt-3 inline-flex rounded-lg border border-[#4f654b]/30 px-3 py-1.5 text-xs font-bold text-[#4f654b] hover:bg-[#e7ece7]"
-                  href={`/entregas/${entrega.id}`}
-                >
-                  Abrir pagina completa
-                </Link>
+                      <span className="text-xs text-[#8a9488]">Prev: {entrega.deliveryEstimate ? new Date(entrega.deliveryEstimate).toLocaleDateString() : "S/P"}</span>
+                      <span className="text-xs font-medium text-[#4f654b]">{nomeMotorista ? `🏍 ${nomeMotorista}` : "Sem motorista"}</span>
+                   </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    className="inline-flex rounded-lg border border-[#4f654b]/30 px-3 py-1.5 text-xs font-bold text-[#4f654b] hover:bg-[#e7ece7]"
+                    href={`/entregas/${entrega.id}`}
+                  >
+                    Abrir pagina completa
+                  </Link>
+                  {entrega.status === "AGUARDANDO_MOTORISTA" ? (
+                    <button
+                      className="inline-flex rounded-lg border border-[#4f654b]/30 px-3 py-1.5 text-xs font-bold text-[#4f654b] hover:bg-[#e7ece7]"
+                      onClick={() => {
+                        setEntregaSelecionada(entrega);
+                        setModalMotoristasAberto(true);
+                      }}
+                      type="button"
+                    >
+                      {nomeMotorista ? "Trocar motorista" : "Vincular motorista"}
+                    </button>
+                  ) : null}
+                </div>
               </article>
             );
           })}
@@ -198,44 +205,11 @@ export default function EntregasPage() {
     </div>
 
       <Modal
-        isOpen={!!entregaSelecionada && !modalMotoristasAberto}
-        onClose={() => setEntregaSelecionada(null)}
-        title={`Detalhes Entrega #${entregaSelecionada?.id}`}
-        description="Informações completas do destino e motorista."
-        size="lg"
-      >
-        {entregaSelecionada && (
-          <div className="space-y-4">
-            <div className="rounded-xl bg-zinc-800/50 p-4 border border-zinc-700">
-               <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">Endereço de Destino</p>
-               <p className="text-white text-sm">{entregaSelecionada.destinationAddress}</p>
-            </div>
-            <div className="rounded-xl bg-zinc-800/50 p-4 border border-zinc-700 flex justify-between items-center">
-               <div>
-                  <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">🏍 Motorista Designado</p>
-                  <p className="text-white text-sm">{getNomeMotorista(entregaSelecionada) || "Nenhum"}</p>
-               </div>
-                <button 
-                  disabled={salvando || !podeVincularMotorista}
-                  onClick={() => setModalMotoristasAberto(true)}
-                  className="bg-[#4f654b] text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-60"
-                >
-                 {salvando ? "Salvando..." : getNomeMotorista(entregaSelecionada) ? "Trocar" : "Vincular"}
-                </button>
-            </div>
-            <button
-              onClick={() => setModalComprovanteAberto(true)}
-              className="w-full mt-2 rounded-xl border border-zinc-600 bg-zinc-800/30 text-zinc-300 text-xs font-bold py-2.5 hover:bg-zinc-700 transition"
-            >
-              🗺️ Ver Comprovante de Entrega
-            </button>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
         isOpen={modalMotoristasAberto}
-        onClose={() => setModalMotoristasAberto(false)}
+        onClose={() => {
+          setModalMotoristasAberto(false);
+          setEntregaSelecionada(null);
+        }}
         title="Vincular Motorista"
         description="Escolha um condutor disponível na lista."
       >
@@ -253,33 +227,18 @@ export default function EntregasPage() {
              </p>
            ) : null}
            {motoristasVisiveis.map((u) => (
-              <button
-                key={u.id}
-               onClick={() => vincularMotorista(u)}
-               className="w-full text-left p-4 rounded-xl border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 transition"
-             >
+               <button
+                disabled={salvando}
+                 key={u.id}
+                onClick={() => vincularMotorista(u)}
+                className="w-full text-left p-4 rounded-xl border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 transition disabled:cursor-not-allowed disabled:opacity-60"
+              >
                <p className="text-white text-sm font-bold">{u.nome}</p>
                <p className="text-zinc-400 text-[11px]">{u.driverProfile?.placaVeiculo}</p>
-             </button>
-           ))}
+          </button>
+            ))}
         </div>
       </Modal>
-
-      {modalComprovanteAberto && entregaSelecionada && (
-        <DeliveryProofModal
-          isOpen={modalComprovanteAberto}
-          onClose={() => setModalComprovanteAberto(false)}
-          deliveryId={entregaSelecionada.id}
-          destinationAddress={entregaSelecionada.destinationAddress}
-          driverName={getNomeMotorista(entregaSelecionada) || undefined}
-          finalization={entregaSelecionada.finalization ?? null}
-          latitudeInicio={entregaSelecionada.latitudeInicio ?? null}
-          longitudeInicio={entregaSelecionada.longitudeInicio ?? null}
-          dataHoraInicio={entregaSelecionada.dataHoraInicio ?? null}
-          detalhesEntrega={entregaSelecionada.details ?? []}
-          ocorrencias={entregaSelecionada.occurrences ?? []}
-        />
-      )}
     </>
   );
 }

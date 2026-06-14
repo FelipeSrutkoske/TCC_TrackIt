@@ -30,4 +30,28 @@ describe('DeliveryCard', () => {
     expect(screen.getByText('Criada em')).toBeOnTheScreen();
     expect(screen.queryByText('Entrega #5')).toBeNull();
   });
+
+  it('shows queue position when provided by current deliveries screen', () => {
+    const delivery: Delivery = {
+      id: 5,
+      driverId: 701,
+      createdAt: '2026-05-24T10:00:00.000Z',
+      destinationAddress: 'Rua B, 200 - Centro',
+      status: 'EM_ROTA',
+    };
+
+    render(
+      <AppThemeProvider>
+        <DeliveryCard
+          delivery={delivery}
+          onPressDetails={jest.fn()}
+          position={1}
+          totalInQueue={3}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('01')).toBeOnTheScreen();
+    expect(screen.getByText('Posicao 1 de 3 na fila')).toBeOnTheScreen();
+  });
 });

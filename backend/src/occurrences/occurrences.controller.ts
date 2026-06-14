@@ -20,6 +20,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { TipoUsuario } from '../users/entities/user.entity';
+import { resolveCompanyScope } from '../common/company-scope';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('occurrences')
@@ -37,8 +38,14 @@ export class OccurrencesController {
 
   @Get()
   @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
-  findAll(@Query() query: OccurrenceQueryDto) {
-    return this.occurrencesService.findAllWithSummary(query);
+  findAll(
+    @Query() query: OccurrenceQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.occurrencesService.findAllWithSummary(
+      query,
+      resolveCompanyScope(user, query.companyId),
+    );
   }
 
   @Get(':id')
