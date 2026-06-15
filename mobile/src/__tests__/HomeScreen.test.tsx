@@ -76,7 +76,10 @@ describe('HomeScreen', () => {
       expect(screen.getByText('2')).toBeOnTheScreen();
     });
 
-    expect(screen.getByText('Suas entregas')).toBeOnTheScreen();
+    expect(screen.getByText('Hub operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Em rota')).toBeOnTheScreen();
+    expect(screen.getByText('Pendentes')).toBeOnTheScreen();
+    expect(screen.getByText('Total')).toBeOnTheScreen();
     expect(screen.queryByText('80%')).not.toBeOnTheScreen();
     expect(screen.queryByText('Taxa de conclusao')).not.toBeOnTheScreen();
     expect(screen.queryByText('Conta ativa')).not.toBeOnTheScreen();

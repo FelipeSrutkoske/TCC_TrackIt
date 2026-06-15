@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
+
+function RocketIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={18} viewBox="0 0 24 24" width={18}>
+      <Path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+      <Path d="M22 2s-4.37-.51-7.89 3L12 8l-4 4 3 3 3-2.11c3.51-3.52 3-7.89 3-7.89z" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+      <Path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+    </Svg>
+  );
+}
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
@@ -154,14 +164,16 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
 
           <Text style={[styles.dispatchDescription, { color: theme.colors.accentText }]}>Confira os dados operacionais antes de iniciar o deslocamento.</Text>
 
-          <View style={styles.metricGrid}>
-            <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
-              <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Status</Text>
-              <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{getDeliveryPhase(delivery.status)}</Text>
-            </View>
-            <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
-              <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Motorista</Text>
-              <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]} numberOfLines={1}>{getDriverName(delivery)}</Text>
+          <View style={styles.metricRows}>
+            <View style={styles.metricGrid}>
+              <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
+                <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Status</Text>
+                <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{getDeliveryPhase(delivery.status)}</Text>
+              </View>
+              <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
+                <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Motorista</Text>
+                <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]} numberOfLines={1}>{getDriverName(delivery)}</Text>
+              </View>
             </View>
             <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
               <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Criada em</Text>
@@ -187,8 +199,15 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
         <DeliveryRoutePreview delivery={delivery} />
 
         <AppCard>
-          <Text style={[styles.actionEyebrow, { color: theme.colors.textMuted }]}>Proxima etapa</Text>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes da entrega</Text>
+          <View style={styles.actionHeaderRow}>
+            <View style={[styles.actionIconBubble, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+              <RocketIcon color={theme.colors.primary} />
+            </View>
+            <View style={styles.actionHeaderText}>
+              <Text style={[styles.actionEyebrow, { color: theme.colors.textMuted }]}>Proxima etapa</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes da entrega</Text>
+            </View>
+          </View>
 
           {delivery.status === 'AGUARDANDO_MOTORISTA' ? (
             <View style={styles.startActionsRow}>
@@ -244,7 +263,12 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
             </>
           ) : null}
 
-          {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
+          {error ? (
+            <View style={[styles.errorRow, { backgroundColor: 'rgba(185,28,28,0.08)', borderColor: theme.colors.danger }]}>
+              <View style={[styles.errorDot, { backgroundColor: theme.colors.danger }]} />
+              <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text>
+            </View>
+          ) : null}
         </AppCard>
       </ScrollView>
     </AppScreen>
@@ -303,6 +327,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     opacity: 0.88,
   },
+  metricRows: {
+    gap: 8,
+  },
   metricGrid: {
     flexDirection: 'row',
     gap: 8,
@@ -355,14 +382,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 21,
   },
+  actionHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionIconBubble: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  actionHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.4,
   },
   actionEyebrow: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   startActionsRow: {
@@ -380,8 +425,24 @@ const styles = StyleSheet.create({
     minHeight: 56,
     width: 64,
   },
+  errorRow: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
   error: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
   },
 });

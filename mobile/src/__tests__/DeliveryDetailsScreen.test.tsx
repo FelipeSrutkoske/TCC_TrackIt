@@ -198,8 +198,10 @@ describe('DeliveryDetailsScreen', () => {
     expect(screen.queryByText('#701')).toBeNull();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
     expect(screen.getByText('Documentos')).toBeOnTheScreen();
-    expect(screen.getByText('Quantidade: 1')).toBeOnTheScreen();
-    expect(screen.getByText('Peso: 1,25 kg')).toBeOnTheScreen();
-    expect(screen.getByText('Volume: 0,02 m3')).toBeOnTheScreen();
+    expect(screen.getByText('Qtd.')).toBeOnTheScreen();
+    expect(screen.getByText('1,25')).toBeOnTheScreen();
+    expect(screen.getByText('0,02')).toBeOnTheScreen();
+    expect(screen.getByText('m³')).toBeOnTheScreen();
+    expect(screen.getByText(/R\$\s*250,00/)).toBeOnTheScreen();
   });
 });

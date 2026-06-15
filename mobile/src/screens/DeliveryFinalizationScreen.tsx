@@ -1,5 +1,52 @@
 import React, { useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
+
+function UserIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
+      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Circle cx="12" cy="7" r="4" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function IdCardIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
+      <Rect height={16} rx={2} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} width={20} x={2} y={4} />
+      <Path d="M6 8h.01M10 8h8M6 12h.01M10 12h8M6 16h.01M10 16h8" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function UsersIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
+      <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Circle cx="9" cy="7" r="4" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function ShieldIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={18} viewBox="0 0 24 24" width={18}>
+      <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+      <Path d="m9 12 2 2 4-4" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function CameraIcon({ color }: { color: string }) {
+  return (
+    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
+      <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Circle cx="12" cy="13" r="4" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
 import * as ImagePicker from 'expo-image-picker';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -207,11 +254,23 @@ export function DeliveryFinalizationScreen({
         />
 
         <AppCard>
-          <Text style={[styles.formEyebrow, { color: theme.colors.textMuted }]}>Recebedor e comprovante</Text>
-          <Text style={[styles.formTitle, { color: theme.colors.text }]}>Dados do recebedor</Text>
+          <View style={styles.formHeaderRow}>
+            <View style={[styles.formIconBubble, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+              <ShieldIcon color={theme.colors.primary} />
+            </View>
+            <View style={styles.formHeaderText}>
+              <Text style={[styles.formEyebrow, { color: theme.colors.textMuted }]}>Recebedor e comprovante</Text>
+              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Dados do recebedor</Text>
+            </View>
+          </View>
 
-          <View style={[styles.fieldGroup, { backgroundColor: theme.colors.surfaceMuted }]}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Nome do recebedor</Text>
+          <View style={[styles.fieldCard, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+            <View style={styles.fieldLabelRow}>
+              <View style={[styles.fieldIconDot, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                <UserIcon color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Nome do recebedor</Text>
+            </View>
             <TextInput
               accessibilityLabel="Nome do recebedor"
               onChangeText={setReceiverName}
@@ -228,8 +287,15 @@ export function DeliveryFinalizationScreen({
               testID="receiver-name-input"
               value={receiverName}
             />
+          </View>
 
-            <Text style={[styles.label, { color: theme.colors.text }]}>Documento do recebedor</Text>
+          <View style={[styles.fieldCard, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+            <View style={styles.fieldLabelRow}>
+              <View style={[styles.fieldIconDot, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                <IdCardIcon color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Documento do recebedor</Text>
+            </View>
             <TextInput
               accessibilityLabel="Documento do recebedor"
               keyboardType="number-pad"
@@ -247,8 +313,15 @@ export function DeliveryFinalizationScreen({
               testID="receiver-document-input"
               value={receiverDocument}
             />
+          </View>
 
-            <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco ou grau</Text>
+          <View style={[styles.fieldCard, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+            <View style={styles.fieldLabelRow}>
+              <View style={[styles.fieldIconDot, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                <UsersIcon color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco ou grau</Text>
+            </View>
             <TextInput
               accessibilityLabel="Parentesco ou grau"
               onChangeText={setReceiverRelation}
@@ -267,6 +340,8 @@ export function DeliveryFinalizationScreen({
             />
           </View>
 
+          <View style={[styles.signatureDivider, { backgroundColor: theme.colors.border }]} />
+
           <SignaturePadField
             label="Assinatura do recebedor"
             onChange={setSignature}
@@ -281,8 +356,15 @@ export function DeliveryFinalizationScreen({
 
           {requiresLocationProof ? (
             <View style={[styles.proofBox, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted }]}>
-              <Text style={[styles.proofTitle, { color: theme.colors.text }]}>Comprovacao de localizacao</Text>
-              <Text style={[styles.proofText, { color: theme.colors.textMuted }]}>Sua localizacao parece distante do endereco da entrega. Tire uma foto do local para concluir.</Text>
+              <View style={styles.proofHeader}>
+                <View style={[styles.proofIconBubble, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                  <CameraIcon color={theme.colors.primary} />
+                </View>
+                <View style={styles.proofHeaderText}>
+                  <Text style={[styles.proofTitle, { color: theme.colors.text }]}>Comprovacao de localizacao</Text>
+                  <Text style={[styles.proofText, { color: theme.colors.textMuted }]}>Localizacao distante. Anexe uma foto.</Text>
+                </View>
+              </View>
               <SecondaryButton
                 onPress={() => {
                   void pickLocationProofPhoto();
@@ -295,7 +377,12 @@ export function DeliveryFinalizationScreen({
             </View>
           ) : null}
 
-          {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
+          {error ? (
+            <View style={[styles.errorRow, { backgroundColor: 'rgba(185,28,28,0.08)', borderColor: theme.colors.danger }]}>
+              <View style={[styles.errorDot, { backgroundColor: theme.colors.danger }]} />
+              <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text>
+            </View>
+          ) : null}
 
           <PrimaryButton
             disabled={isSubmitting}
@@ -407,10 +494,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 21,
   },
+  formHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  formIconBubble: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  formHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
   formEyebrow: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   formTitle: {
@@ -418,25 +522,61 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.4,
   },
-  fieldGroup: {
-    borderRadius: 20,
-    gap: 12,
+  fieldCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
     padding: 14,
   },
+  fieldLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fieldIconDot: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
   label: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '700',
   },
   input: {
-    minHeight: 56,
+    minHeight: 52,
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 14,
     paddingHorizontal: 16,
     fontSize: 16,
   },
+  signatureDivider: {
+    height: 1,
+    borderRadius: 1,
+    opacity: 0.5,
+  },
+  errorRow: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
   error: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
   },
   proofBox: {
     borderRadius: 18,
@@ -444,13 +584,31 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
   },
+  proofHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  proofIconBubble: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  proofHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
   proofTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
   proofText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
   },
   proofImage: {
     height: 180,
