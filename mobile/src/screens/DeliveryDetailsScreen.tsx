@@ -44,6 +44,10 @@ function toNumber(value?: number | string | null) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
+function getDriverName(delivery: Delivery) {
+  return delivery.driver?.user?.nome ?? `#${delivery.driverId}`;
+}
+
 function MapNavigationIcon({ color }: { color: string }) {
   return (
     <Svg fill="none" height={24} viewBox="0 0 24 24" width={24}>
@@ -119,7 +123,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
         <AppCard>
           <StatusBadge status={delivery.status} />
           <InfoRow label="Destino" value={delivery.destinationAddress} />
-          <InfoRow label="Motorista vinculado" value={`#${delivery.driverId}`} />
+          <InfoRow label="Motorista vinculado" value={getDriverName(delivery)} />
         </AppCard>
 
         <DeliveryDetailsSummary

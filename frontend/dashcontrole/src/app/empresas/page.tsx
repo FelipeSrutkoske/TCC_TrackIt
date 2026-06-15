@@ -172,7 +172,9 @@ export default function CompaniesPage() {
 
   async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const canCreate = isAdmin || (isDashboard && userForm.tipoUsuario === "MOTORISTA");
+    const canCreate =
+      isAdmin ||
+      (isDashboard && ["DASHBOARD", "MOTORISTA"].includes(userForm.tipoUsuario));
     if (!canCreate) return;
 
     const companyId = userForm.tipoUsuario === "ADMIN" ? null : Number(userForm.companyId || fixedCompanyId);
@@ -227,7 +229,7 @@ export default function CompaniesPage() {
         <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="E-mail" required type="email" value={userForm.email} />
         <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" minLength={6} onChange={(e) => setUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Senha inicial" required type="password" value={userForm.senha} />
 
-        {modalUsuarioAberto ? (
+        {modalUsuarioAberto && isAdmin ? (
           <select className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, tipoUsuario: e.target.value as Usuario["tipoUsuario"] }))} value={userForm.tipoUsuario}>
             <option value="DASHBOARD">Dashboard</option>
             <option value="ADMIN">Admin</option>
@@ -275,34 +277,32 @@ export default function CompaniesPage() {
                 <h1 className="mt-2 text-2xl font-black text-[#1f2320] sm:text-3xl">Empresas, acessos e escopo operacional</h1>
                 <p className="mt-2 max-w-3xl text-sm text-[#5f695d]">Controle clientes e usuarios sem misturar cadastro com analise. O backend limita dados pela empresa do usuario.</p>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
-                <input className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm sm:col-span-1" onChange={(e) => setFilter(e.target.value)} placeholder="Buscar empresa..." value={filter} />
-                <select className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm" onChange={(e) => setStatusFilter(e.target.value)} value={statusFilter}>
-                  <option value="">Todos os status</option>
-                  <option value="ativo">Ativos</option>
-                  <option value="inadimplente">Inadimplentes</option>
-                  <option value="cancelado">Cancelados</option>
-                </select>
-                {isAdmin ? (
+              {isAdmin ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
+                  <input className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm sm:col-span-1" onChange={(e) => setFilter(e.target.value)} placeholder="Buscar empresa..." value={filter} />
+                  <select className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm" onChange={(e) => setStatusFilter(e.target.value)} value={statusFilter}>
+                    <option value="">Todos os status</option>
+                    <option value="ativo">Ativos</option>
+                    <option value="inadimplente">Inadimplentes</option>
+                    <option value="cancelado">Cancelados</option>
+                  </select>
                   <select className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm" onChange={(e) => setEmpresaSelecionada(e.target.value)} value={empresaSelecionada}>
                     <option value="">Todas as empresas</option>
                     {companyOptions.map((company) => (
                       <option key={company.id} value={company.id}>{companyName(company)}</option>
                     ))}
                   </select>
-                ) : (
-                  <div className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm font-bold text-[#4f654b]">
-                    {fixedCompanyName ? companyName(fixedCompanyName) : "Empresa vinculada"}
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : null}
             </div>
           </section>
 
           {error ? <section className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">{error}</section> : null}
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Empresas" value={loading ? "..." : companies.length} detail={isAdmin && !empresaSelecionada ? "Carteira carregada" : "Escopo atual"} />
+          <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isAdmin ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+            {isAdmin ? (
+              <StatCard label="Empresas" value={loading ? "..." : companies.length} detail={!empresaSelecionada ? "Carteira carregada" : "Escopo atual"} />
+            ) : null}
             <StatCard label="Entregas" value={loading ? "..." : totals.deliveries} detail="Volume operacional" />
             <StatCard label="Ocorrencias" value={loading ? "..." : totals.occurrences} detail="Registros no escopo" />
             <StatCard label="GPS divergente" value={loading ? "..." : totals.gps} detail="Finalizacoes fora do raio" />
@@ -311,15 +311,15 @@ export default function CompaniesPage() {
           <section className="rounded-2xl border border-[#c8cec8] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f654b]">Acoes</p>
-                <h2 className="mt-1 text-lg font-black text-[#1f2320]">Cadastros em modais</h2>
-                <p className="text-sm text-[#748071]">A tela principal fica focada em leitura; alteracoes abrem fluxos dedicados.</p>
+                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f654b]">Acoes</p>
+                 <h2 className="mt-1 text-lg font-black text-[#1f2320]">{isAdmin ? "Cadastros" : "Cadastros da empresa"}</h2>
+                 <p className="text-sm text-[#748071]">{isAdmin ? "Cadastre clientes e acessos administrativos em fluxos dedicados." : "Cadastre operadores e motoristas vinculados automaticamente a sua empresa."}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 {isAdmin ? (
                   <button className="rounded-xl bg-[#4f654b] px-5 py-2.5 text-sm font-black text-white" onClick={() => setModalEmpresaAberto(true)} type="button">Cadastrar cliente</button>
                 ) : null}
-                {isAdmin ? (
+                {isAdmin || isDashboard ? (
                   <button className="rounded-xl border border-[#4f654b] px-5 py-2.5 text-sm font-black text-[#4f654b]" onClick={() => openUserModal("DASHBOARD")} type="button">Criar usuario</button>
                 ) : null}
                 {isAdmin || isDashboard ? (
@@ -333,7 +333,7 @@ export default function CompaniesPage() {
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-lg font-black text-[#1f2320]">Carteira operacional</h2>
-                <p className="text-sm text-[#748071]">Lista refletindo o escopo selecionado ou a empresa vinculada.</p>
+                <p className="text-sm text-[#748071]">{isAdmin ? "Lista refletindo o escopo selecionado." : "Indicadores operacionais da sua empresa."}</p>
               </div>
             </div>
             {loading ? <p className="text-sm font-bold text-[#748071]">Carregando...</p> : null}
@@ -378,7 +378,7 @@ export default function CompaniesPage() {
         </form>
       </Modal>
 
-      <Modal isOpen={modalUsuarioAberto} onClose={() => setModalUsuarioAberto(false)} title="Criar usuario" description="Administradores podem criar acessos globais ou vinculados a uma empresa." size="lg">
+      <Modal isOpen={modalUsuarioAberto} onClose={() => setModalUsuarioAberto(false)} title="Criar usuario" description={isAdmin ? "Administradores podem criar acessos globais ou vinculados a uma empresa." : "Crie um acesso operacional de sua empresa."} size="lg">
         {renderUserForm("Criar usuario")}
       </Modal>
 

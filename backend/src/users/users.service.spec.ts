@@ -222,6 +222,33 @@ describe('UsersService', () => {
     });
   });
 
+  describe('createScoped', () => {
+    it('deve permitir que usuario dashboard crie outro usuario dashboard na propria empresa', async () => {
+      const result = await service.createScoped(
+        {
+          nome: 'Operador Empresa',
+          email: 'operador@test.com',
+          senha: '123456',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+        } as any,
+        {
+          id: 99,
+          email: 'dashboard@test.com',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          companyId: 3,
+        },
+      );
+
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          companyId: 3,
+        }),
+      );
+      expect(result.companyId).toBe(3);
+    });
+  });
+
   describe('findAll', () => {
     it('deve listar usuarios com relacao driverProfile', async () => {
       const users = [

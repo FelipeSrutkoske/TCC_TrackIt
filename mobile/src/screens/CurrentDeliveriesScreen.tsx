@@ -112,11 +112,9 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
             </View>
           </View>
 
-          <View style={styles.compactMetricsRow}>
-            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{deliveries.length} Ativas</Text>
-            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{inRouteDeliveries} Em rota</Text>
-            <Text style={[styles.compactMetric, { color: theme.colors.accentText }]}>{awaitingDeliveries} Pendente</Text>
-          </View>
+          {!isSummaryExpanded ? (
+            <Text style={[styles.expandHint, { color: theme.colors.accentText }]}>Clique para expandir</Text>
+          ) : null}
 
           {isSummaryExpanded ? (
             <View style={styles.expandedContent}>
@@ -373,6 +371,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     opacity: 0.9,
+  },
+  expandHint: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    opacity: 0.9,
+    textTransform: 'uppercase',
   },
   metricGrid: {
     flexDirection: 'row',

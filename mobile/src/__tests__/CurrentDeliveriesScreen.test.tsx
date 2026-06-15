@@ -62,9 +62,10 @@ describe('CurrentDeliveriesScreen', () => {
 
     expect(await screen.findByText('Operacao ativa')).toBeOnTheScreen();
     expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
-    expect(screen.getByText('2 Ativas')).toBeOnTheScreen();
-    expect(screen.getByText('1 Em rota')).toBeOnTheScreen();
-    expect(screen.getByText('1 Pendente')).toBeOnTheScreen();
+    expect(screen.getByText('Clique para expandir')).toBeOnTheScreen();
+    expect(screen.queryByText('2 Ativas')).not.toBeOnTheScreen();
+    expect(screen.queryByText('1 Em rota')).not.toBeOnTheScreen();
+    expect(screen.queryByText('1 Pendente')).not.toBeOnTheScreen();
     expect(screen.getByTestId('current-deliveries-chevron-icon')).toBeOnTheScreen();
     expect(screen.getByText('Ordem de trabalho')).toBeOnTheScreen();
     expect(screen.getByText('Sua fila')).toBeOnTheScreen();
@@ -94,6 +95,12 @@ describe('CurrentDeliveriesScreen', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Expandir resumo da operacao' }));
 
     expect(screen.getByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).toBeOnTheScreen();
+    expect(screen.queryByText('2 Ativas')).not.toBeOnTheScreen();
+    expect(screen.queryByText('1 Em rota')).not.toBeOnTheScreen();
+    expect(screen.queryByText('1 Pendente')).not.toBeOnTheScreen();
+    expect(screen.getByText('total na fila')).toBeOnTheScreen();
+    expect(screen.getByText('50% em deslocamento')).toBeOnTheScreen();
+    expect(screen.getByText('pronta para sair')).toBeOnTheScreen();
     expect(screen.getByText('Composicao da fila')).toBeOnTheScreen();
     expect(screen.getByText(/^Sincronizado/)).toBeOnTheScreen();
 

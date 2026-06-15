@@ -56,7 +56,8 @@ export class UsersService {
   ): Promise<User> {
     if (
       currentUser.tipoUsuario !== TipoUsuario.ADMIN &&
-      data.tipoUsuario !== TipoUsuario.MOTORISTA
+      data.tipoUsuario !== TipoUsuario.MOTORISTA &&
+      data.tipoUsuario !== TipoUsuario.DASHBOARD
     ) {
       throw new ForbiddenException('Usuario sem permissao para criar este tipo de usuario');
     }

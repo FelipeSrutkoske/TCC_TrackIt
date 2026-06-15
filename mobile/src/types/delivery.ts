@@ -32,6 +32,14 @@ export type Delivery = {
     corporateName: string;
     tradeName?: string | null;
   } | null;
+  driver?: {
+    id: number;
+    userId: number;
+    user?: {
+      id: number;
+      nome: string;
+    } | null;
+  } | null;
   destinationAddress: string;
   latitudeDestino?: number | string | null;
   longitudeDestino?: number | string | null;

@@ -166,6 +166,11 @@ describe('DeliveryDetailsScreen', () => {
             params: {
               delivery: {
                 ...deliveryFixture,
+                driver: {
+                  id: 701,
+                  userId: 7,
+                  user: { id: 7, nome: 'Joao Motorista' },
+                },
                 details: [
                   {
                     id: 10,
@@ -186,7 +191,12 @@ describe('DeliveryDetailsScreen', () => {
     );
 
     expect(screen.getByText('Detalhes da carga')).toBeOnTheScreen();
+    expect(screen.getByText('Joao Motorista')).toBeOnTheScreen();
+    expect(screen.queryByText('#701')).toBeNull();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
     expect(screen.getByText('Documentos')).toBeOnTheScreen();
+    expect(screen.getByText('Quantidade: 1')).toBeOnTheScreen();
+    expect(screen.getByText('Peso: 1,25 kg')).toBeOnTheScreen();
+    expect(screen.getByText('Volume: 0,02 m3')).toBeOnTheScreen();
   });
 });

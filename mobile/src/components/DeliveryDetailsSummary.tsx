@@ -50,9 +50,9 @@ export function DeliveryDetailsSummary({
             </View>
 
             <View style={styles.metricGrid}>
-              <Text style={[styles.metric, { color: theme.colors.text }]}>Qtd: {itemDetalheEntrega.quantidade}</Text>
-              <Text style={[styles.metric, { color: theme.colors.text }]}>Peso: {formatarNumeroDecimal(itemDetalheEntrega.pesoKg, 3)} kg</Text>
-              <Text style={[styles.metric, { color: theme.colors.text }]}>Volume: {formatarNumeroDecimal(itemDetalheEntrega.volumeM3, 4)} m3</Text>
+              <Text style={[styles.metric, { color: theme.colors.text }]}>Quantidade: {itemDetalheEntrega.quantidade}</Text>
+              <Text style={[styles.metric, { color: theme.colors.text }]}>Peso: {formatarNumeroDecimal(itemDetalheEntrega.pesoKg)} kg</Text>
+              <Text style={[styles.metric, { color: theme.colors.text }]}>Volume: {formatarNumeroDecimal(itemDetalheEntrega.volumeM3)} m3</Text>
             </View>
           </View>
         ))
@@ -61,15 +61,15 @@ export function DeliveryDetailsSummary({
   );
 }
 
-function formatarNumeroDecimal(valor: number | string, casas: number): string {
+function formatarNumeroDecimal(valor: number | string): string {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) {
     return '-';
   }
 
   return numero.toLocaleString('pt-BR', {
-    maximumFractionDigits: casas,
-    minimumFractionDigits: casas,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   });
 }
 

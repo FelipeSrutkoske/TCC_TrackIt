@@ -176,7 +176,7 @@ export function DeliveryFinalizationScreen({
           <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>
             {route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`}
           </Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Entrega #{route.params.delivery.id}</Text>
+          <Text style={[styles.heroSubtitle, styles.deliveryCode]}>Entrega #{route.params.delivery.id}</Text>
           <View style={styles.heroRows}>
             <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Criada em: {formatDateTime(route.params.delivery.createdAt)}</Text>
             <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Destino: {route.params.delivery.destinationAddress}</Text>
@@ -213,7 +213,7 @@ export function DeliveryFinalizationScreen({
             accessibilityLabel="Documento do recebedor"
             keyboardType="number-pad"
             onChangeText={(value) => setReceiverDocument(maskReceiverDocument(value))}
-            placeholder="CPF com 11 digitos ou RG com 9 digitos"
+            placeholder="CPF ou RG validos."
             placeholderTextColor={theme.colors.textMuted}
             style={[
               styles.input,
@@ -317,6 +317,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 22,
+  },
+  deliveryCode: {
+    color: '#39FF14',
   },
   heroRows: {
     gap: 8,
