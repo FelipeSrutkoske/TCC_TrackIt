@@ -19,6 +19,7 @@ export function DeliveryDetailsSummary({
 
   return (
     <AppCard>
+      <Text style={[styles.eyebrow, { color: theme.colors.textMuted }]}>Ordem de servico</Text>
       <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
 
       {details.length === 0 ? (
@@ -89,6 +90,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '800',
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
   },
   empty: {
     fontSize: 14,

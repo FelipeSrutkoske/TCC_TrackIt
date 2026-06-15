@@ -85,6 +85,9 @@ describe('DeliveryFinalizationScreen', () => {
 
     expect(screen.queryByText('Encerramento operacional')).toBeNull();
     expect(screen.queryByText('Fechar entrega com validacao completa')).toBeNull();
+    expect(screen.getByText('Fechamento operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Recebedor e comprovante')).toBeOnTheScreen();
+    expect(screen.getByText('Dados do recebedor')).toBeOnTheScreen();
     expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
     expect(screen.getByText('Entrega #2')).toHaveStyle({ color: '#39FF14' });
     expect(screen.getByPlaceholderText('CPF ou RG validos.')).toBeOnTheScreen();

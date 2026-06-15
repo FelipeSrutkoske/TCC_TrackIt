@@ -6,9 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppCard } from '../components/AppCard';
 import { DeliveryDetailsSummary } from '../components/DeliveryDetailsSummary';
 import { DeliveryRoutePreview } from '../components/DeliveryRoutePreview';
-import { AppHeader } from '../components/AppHeader';
 import { AppScreen } from '../components/AppScreen';
-import { InfoRow } from '../components/InfoRow';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
 import { StatusBadge } from '../components/StatusBadge';
@@ -46,6 +44,26 @@ function toNumber(value?: number | string | null) {
 
 function getDriverName(delivery: Delivery) {
   return delivery.driver?.user?.nome ?? `#${delivery.driverId}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return 'Nao informado';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Nao informado';
+  }
+
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function MapNavigationIcon({ color }: { color: string }) {
@@ -113,18 +131,52 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
   return (
     <AppScreen>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
-          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Missao operacional</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entrega #{delivery.id}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Confira os dados operacionais antes de iniciar o deslocamento.</Text>
-          <Text style={[styles.phaseLabel, { color: theme.colors.accentText }]}>{getDeliveryPhase(delivery.status)}</Text>
-        </View>
+        <View
+          style={[
+            styles.dispatchPanel,
+            {
+              backgroundColor: theme.colors.surfaceAccent,
+              borderColor: theme.colors.borderStrong,
+            },
+          ]}
+        >
+          <View style={styles.dispatchHeader}>
+            <View style={styles.dispatchHeaderText}>
+              <View style={styles.statusPillRow}>
+                <View style={[styles.liveDot, { backgroundColor: theme.colors.statusSuccess }]} />
+                <Text style={[styles.dispatchEyebrow, { color: theme.colors.accentText }]}>Painel da entrega</Text>
+              </View>
+              <Text style={[styles.dispatchTitle, { color: theme.colors.accentText }]}>Missao operacional</Text>
+              <Text style={[styles.dispatchSubtitle, { color: theme.colors.accentText }]}>Entrega #{delivery.id}</Text>
+            </View>
+            <StatusBadge status={delivery.status} />
+          </View>
 
-        <AppCard>
-          <StatusBadge status={delivery.status} />
-          <InfoRow label="Destino" value={delivery.destinationAddress} />
-          <InfoRow label="Motorista vinculado" value={getDriverName(delivery)} />
-        </AppCard>
+          <Text style={[styles.dispatchDescription, { color: theme.colors.accentText }]}>Confira os dados operacionais antes de iniciar o deslocamento.</Text>
+
+          <View style={styles.metricGrid}>
+            <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
+              <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Status</Text>
+              <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{getDeliveryPhase(delivery.status)}</Text>
+            </View>
+            <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
+              <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Motorista</Text>
+              <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]} numberOfLines={1}>{getDriverName(delivery)}</Text>
+            </View>
+            <View style={[styles.metricBlock, { borderColor: theme.colors.borderStrong }]}>
+              <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Criada em</Text>
+              <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]} numberOfLines={1}>{formatDateTime(delivery.createdAt)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.contextPanel}>
+            <View style={styles.contextHeader}>
+              <Text style={[styles.contextTitle, { color: theme.colors.accentText }]}>Contexto operacional</Text>
+              <Text style={[styles.contextHint, { color: theme.colors.accentText }]}>destino da missao</Text>
+            </View>
+            <Text style={[styles.destinationText, { color: theme.colors.accentText }]}>{delivery.destinationAddress}</Text>
+          </View>
+        </View>
 
         <DeliveryDetailsSummary
           details={delivery.details}
@@ -135,7 +187,8 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
         <DeliveryRoutePreview delivery={delivery} />
 
         <AppCard>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes</Text>
+          <Text style={[styles.actionEyebrow, { color: theme.colors.textMuted }]}>Proxima etapa</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Acoes da entrega</Text>
 
           {delivery.status === 'AGUARDANDO_MOTORISTA' ? (
             <View style={styles.startActionsRow}>
@@ -203,33 +256,114 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 18,
   },
-  hero: {
-    borderRadius: 30,
-    gap: 12,
-    padding: 20,
+  dispatchPanel: {
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 14,
+    padding: 18,
   },
-  heroEyebrow: {
-    fontSize: 12,
+  dispatchHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  dispatchHeaderText: {
+    flex: 1,
+    gap: 6,
+  },
+  statusPillRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  liveDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  dispatchEyebrow: {
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
-  heroTitle: {
-    fontSize: 30,
+  dispatchTitle: {
+    fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.8,
   },
-  heroSubtitle: {
+  dispatchSubtitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  dispatchDescription: {
     fontSize: 15,
     lineHeight: 22,
+    opacity: 0.88,
   },
-  phaseLabel: {
-    fontSize: 16,
+  metricGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  metricBlock: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    padding: 10,
+  },
+  metricBlockLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    opacity: 0.75,
+    textTransform: 'uppercase',
+  },
+  metricBlockValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  contextPanel: {
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderRadius: 18,
+    gap: 8,
+    padding: 12,
+  },
+  contextHeader: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  contextTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  contextHint: {
+    fontSize: 10,
+    fontWeight: '600',
+    opacity: 0.7,
+  },
+  destinationText: {
+    fontSize: 15,
     fontWeight: '700',
+    lineHeight: 21,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
+  },
+  actionEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
   },
   startActionsRow: {
     flexDirection: 'row',

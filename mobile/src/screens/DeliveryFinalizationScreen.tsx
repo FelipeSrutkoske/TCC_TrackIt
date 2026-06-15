@@ -171,16 +171,32 @@ export function DeliveryFinalizationScreen({
         scrollEnabled={scrollEnabled}
         testID="delivery-finalization-scroll"
       >
-        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
-          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Empresa cliente</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>
-            {route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`}
-          </Text>
-          <Text style={[styles.heroSubtitle, styles.deliveryCode]}>Entrega #{route.params.delivery.id}</Text>
-          <View style={styles.heroRows}>
-            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Criada em: {formatDateTime(route.params.delivery.createdAt)}</Text>
-            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Destino: {route.params.delivery.destinationAddress}</Text>
-            <Text style={[styles.heroInfo, { color: theme.colors.accentText }]}>Status atual: Em rota</Text>
+        <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent, borderColor: theme.colors.borderStrong }]}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroHeaderText}>
+              <View style={styles.statusPillRow}>
+                <View style={[styles.liveDot, { backgroundColor: theme.colors.statusSuccess }]} />
+                <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Fechamento operacional</Text>
+              </View>
+              <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>
+                {route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`}
+              </Text>
+              <Text style={[styles.heroSubtitle, styles.deliveryCode]}>Entrega #{route.params.delivery.id}</Text>
+            </View>
+          </View>
+          <View style={styles.heroMetricGrid}>
+            <View style={styles.heroMetricBlock}>
+              <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Criada em</Text>
+              <Text style={[styles.heroMetricValue, { color: theme.colors.accentText }]} numberOfLines={1}>{formatDateTime(route.params.delivery.createdAt)}</Text>
+            </View>
+            <View style={styles.heroMetricBlock}>
+              <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Status</Text>
+              <Text style={[styles.heroMetricValue, { color: theme.colors.accentText }]}>Em rota</Text>
+            </View>
+          </View>
+          <View style={styles.destinationPanel}>
+            <Text style={[styles.destinationLabel, { color: theme.colors.accentText }]}>Destino para baixa</Text>
+            <Text style={[styles.destinationText, { color: theme.colors.accentText }]}>{route.params.delivery.destinationAddress}</Text>
           </View>
         </View>
 
@@ -191,57 +207,65 @@ export function DeliveryFinalizationScreen({
         />
 
         <AppCard>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Nome do recebedor</Text>
-          <TextInput
-            accessibilityLabel="Nome do recebedor"
-            onChangeText={setReceiverName}
-            placeholder="Ex.: Maria da Silva"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              },
-            ]}
-            testID="receiver-name-input"
-            value={receiverName}
-          />
+          <Text style={[styles.formEyebrow, { color: theme.colors.textMuted }]}>Recebedor e comprovante</Text>
+          <Text style={[styles.formTitle, { color: theme.colors.text }]}>Dados do recebedor</Text>
 
-          <Text style={[styles.label, { color: theme.colors.text }]}>Documento do recebedor</Text>
-          <TextInput
-            accessibilityLabel="Documento do recebedor"
-            keyboardType="number-pad"
-            onChangeText={(value) => setReceiverDocument(maskReceiverDocument(value))}
-            placeholder="CPF ou RG validos."
-            placeholderTextColor={theme.colors.textMuted}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              },
-            ]}
-            testID="receiver-document-input"
-            value={receiverDocument}
-          />
+          <View style={[styles.fieldGroup, { backgroundColor: theme.colors.surfaceMuted }]}>
+            <Text style={[styles.label, { color: theme.colors.text }]}>Nome do recebedor</Text>
+            <TextInput
+              accessibilityLabel="Nome do recebedor"
+              onChangeText={setReceiverName}
+              placeholder="Ex.: Maria da Silva"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+              testID="receiver-name-input"
+              value={receiverName}
+            />
 
-          <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco ou grau</Text>
-          <TextInput
-            accessibilityLabel="Parentesco ou grau"
-            onChangeText={setReceiverRelation}
-            placeholder="Ex.: Irmao, primo, porteiro"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              },
-            ]}
-            testID="receiver-relation-input"
-            value={receiverRelation}
-          />
+            <Text style={[styles.label, { color: theme.colors.text }]}>Documento do recebedor</Text>
+            <TextInput
+              accessibilityLabel="Documento do recebedor"
+              keyboardType="number-pad"
+              onChangeText={(value) => setReceiverDocument(maskReceiverDocument(value))}
+              placeholder="CPF ou RG validos."
+              placeholderTextColor={theme.colors.textMuted}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+              testID="receiver-document-input"
+              value={receiverDocument}
+            />
+
+            <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco ou grau</Text>
+            <TextInput
+              accessibilityLabel="Parentesco ou grau"
+              onChangeText={setReceiverRelation}
+              placeholder="Ex.: Irmao, primo, porteiro"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+              testID="receiver-relation-input"
+              value={receiverRelation}
+            />
+          </View>
 
           <SignaturePadField
             label="Assinatura do recebedor"
@@ -298,9 +322,28 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   hero: {
-    borderRadius: 30,
+    borderRadius: 28,
+    borderWidth: 1,
     gap: 12,
-    padding: 20,
+    padding: 18,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  heroHeaderText: {
+    flex: 1,
+    gap: 6,
+  },
+  statusPillRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  liveDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
   heroEyebrow: {
     fontSize: 12,
@@ -315,19 +358,70 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '800',
     lineHeight: 22,
   },
   deliveryCode: {
     color: '#39FF14',
   },
-  heroRows: {
+  heroMetricGrid: {
+    flexDirection: 'row',
     gap: 8,
   },
-  heroInfo: {
-    fontSize: 14,
+  heroMetricBlock: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    padding: 10,
+  },
+  heroMetricLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    opacity: 0.75,
+    textTransform: 'uppercase',
+  },
+  heroMetricValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  destinationPanel: {
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderRadius: 18,
+    gap: 6,
+    padding: 12,
+  },
+  destinationLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    opacity: 0.78,
+    textTransform: 'uppercase',
+  },
+  destinationText: {
+    fontSize: 15,
     fontWeight: '700',
-    lineHeight: 20,
+    lineHeight: 21,
+  },
+  formEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  fieldGroup: {
+    borderRadius: 20,
+    gap: 12,
+    padding: 14,
   },
   label: {
     fontSize: 14,

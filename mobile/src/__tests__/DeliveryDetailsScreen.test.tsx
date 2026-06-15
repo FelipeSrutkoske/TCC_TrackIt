@@ -79,6 +79,8 @@ describe('DeliveryDetailsScreen', () => {
     );
 
     expect(screen.getByText('Missao operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Painel da entrega')).toBeOnTheScreen();
+    expect(screen.getByText('Contexto operacional')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando despacho')).toBeOnTheScreen();
 
     fireEvent.press(screen.getByRole('button', { name: 'Iniciar entrega' }));
@@ -191,6 +193,7 @@ describe('DeliveryDetailsScreen', () => {
     );
 
     expect(screen.getByText('Detalhes da carga')).toBeOnTheScreen();
+    expect(screen.getByText('Ordem de servico')).toBeOnTheScreen();
     expect(screen.getByText('Joao Motorista')).toBeOnTheScreen();
     expect(screen.queryByText('#701')).toBeNull();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
