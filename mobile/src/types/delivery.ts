@@ -25,6 +25,7 @@ export type DeliveryOccurrence = {
 
 export type Delivery = {
   id: number;
+  companySequence?: number | null;
   driverId: number;
   companyId?: number | null;
   company?: {

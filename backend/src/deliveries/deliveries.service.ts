@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, LessThanOrEqual, Repository } from 'typeorm';
 import { Delivery, StatusEntrega } from './entities/delivery.entity';
 import { DeliveryDetail } from './entities/delivery-detail.entity';
 import { Company } from './entities/company.entity';
@@ -225,20 +225,22 @@ export class DeliveriesService {
     return this.findOne(createdDeliveryId, scope);
   }
 
-  findAll(scope?: CompanyScope): Promise<Delivery[]> {
+  async findAll(scope?: CompanyScope): Promise<Delivery[]> {
     const scopedWhere = this.getScopedDeliveryWhere(scope);
 
-    return this.deliveriesRepository.find({
+    const deliveries = await this.deliveriesRepository.find({
       ...(scopedWhere ? { where: scopedWhere } : {}),
       relations: this.deliveryRelations,
       order: { id: 'DESC' },
     });
+
+    return this.withCompanySequences(deliveries);
   }
 
   async findCurrentByUser(userId: number): Promise<Delivery[]> {
     const driverId = await this.getRequiredDriverProfileId(userId);
 
-    return this.deliveriesRepository.find({
+    const deliveries = await this.deliveriesRepository.find({
       where: [
         {
           driverId,
@@ -250,8 +252,10 @@ export class DeliveriesService {
         },
       ],
       relations: ['company', 'occurrences', 'finalization', 'details'],
-      order: { id: 'DESC' },
+      order: { id: 'ASC' },
     });
+
+    return this.withCompanySequences(deliveries);
   }
 
   async findHistoryByUser(
@@ -304,7 +308,7 @@ export class DeliveriesService {
       totalCanceladas;
 
     return {
-      items,
+      items: await this.withCompanySequences(items),
       metrics: {
         totalConcluidas,
         totalEmRota,
@@ -323,7 +327,7 @@ export class DeliveriesService {
       relations: this.deliveryRelations,
     });
     if (!delivery) throw new NotFoundException(`Entrega #${id} não encontrada`);
-    return delivery;
+    return this.withCompanySequence(delivery);
   }
 
   async findOwnedByUser(userId: number, deliveryId: number): Promise<Delivery> {
@@ -337,7 +341,26 @@ export class DeliveriesService {
       throw new NotFoundException(`Entrega #${deliveryId} não encontrada`);
     }
 
-    return delivery;
+    return this.withCompanySequence(delivery);
+  }
+
+  private async withCompanySequences(deliveries: Delivery[]): Promise<Delivery[]> {
+    return Promise.all(deliveries.map((delivery) => this.withCompanySequence(delivery)));
+  }
+
+  private async withCompanySequence(delivery: Delivery): Promise<Delivery> {
+    if (!delivery.companyId) {
+      return delivery;
+    }
+
+    const companySequence = await this.deliveriesRepository.count({
+      where: {
+        companyId: delivery.companyId,
+        id: LessThanOrEqual(delivery.id),
+      },
+    });
+
+    return Object.assign(delivery, { companySequence });
   }
 
   async startByUser(

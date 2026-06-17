@@ -170,18 +170,18 @@ function RefreshIcon({ color }: { color: string }) {
   return (
     <Svg
       fill="none"
-      height={22}
+      height={20}
       stroke={color}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
       viewBox="0 0 24 24"
-      width={22}
+      width={20}
     >
-      <Path d="M21 12a9 9 0 0 1-15.5 6.2" />
-      <Path d="M3 12A9 9 0 0 1 18.5 5.8" />
-      <Path d="M18 2v4h4" />
-      <Path d="M6 22v-4H2" />
+      <Path d="M21 2v6h-6" />
+      <Path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <Path d="M3 22v-6h6" />
+      <Path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
     </Svg>
   );
 }

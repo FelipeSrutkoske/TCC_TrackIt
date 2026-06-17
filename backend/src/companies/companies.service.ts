@@ -100,7 +100,7 @@ export class CompaniesService {
   }
 
   private withAnalytics(company: Company): CompanyWithAnalytics {
-    const deliveries = company.deliveries ?? [];
+    const deliveries = this.withDeliverySequences(company.deliveries ?? []);
     const completed = deliveries.filter(
       (delivery) => delivery.status === StatusEntrega.ENTREGUE,
     );
@@ -114,6 +114,7 @@ export class CompaniesService {
 
     return {
       ...company,
+      deliveries,
       analytics: {
         totalDeliveries: deliveries.length,
         completionRate: this.percentage(completed.length, deliveries.length),
@@ -128,6 +129,12 @@ export class CompaniesService {
         lastDeliveryAt: lastDeliveryAt?.toISOString() ?? null,
       },
     };
+  }
+
+  private withDeliverySequences(deliveries: Delivery[]): Delivery[] {
+    return [...deliveries]
+      .sort((a, b) => a.id - b.id)
+      .map((delivery, index) => Object.assign(delivery, { companySequence: index + 1 }));
   }
 
   private isDelayed(delivery: Delivery): boolean {

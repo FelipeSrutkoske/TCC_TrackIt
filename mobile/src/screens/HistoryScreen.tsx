@@ -10,6 +10,7 @@ import { RootStackParamList } from '../navigation/types';
 import { getDeliveryHistory } from '../services/deliveries.service';
 import { Delivery, DeliveryHistoryMetrics } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 
 type HistoryScreenProps = Partial<NativeStackScreenProps<RootStackParamList, 'History'>>;
 
@@ -154,7 +155,7 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
                   ]}
                 >
                   <View style={styles.deliveryHeader}>
-                    <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? `Entrega #${delivery.id}`}</Text>
+                    <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? getDeliveryDisplayLabel(delivery)}</Text>
                     <StatusBadge status={delivery.status} />
                   </View>
 

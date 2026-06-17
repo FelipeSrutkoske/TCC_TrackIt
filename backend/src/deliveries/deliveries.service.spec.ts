@@ -537,11 +537,12 @@ describe('DeliveriesService', () => {
   describe('findCurrentByUser', () => {
     it('deve resolver o perfil do motorista e retornar apenas entregas ativas dele', async () => {
       const activeDeliveries = [
-        { id: 7, driverId: 14, status: StatusEntrega.AGUARDANDO_MOTORISTA },
-        { id: 8, driverId: 14, status: StatusEntrega.EM_ROTA },
+        { id: 7, companyId: 2, driverId: 14, status: StatusEntrega.AGUARDANDO_MOTORISTA },
+        { id: 8, companyId: 2, driverId: 14, status: StatusEntrega.EM_ROTA },
       ];
       mockUsersService.resolveDriverProfileId.mockResolvedValue(14);
       mockRepository.find.mockResolvedValue(activeDeliveries);
+      mockRepository.count.mockResolvedValueOnce(3).mockResolvedValueOnce(4);
 
       const result = await service.findCurrentByUser(77);
 
@@ -558,9 +559,15 @@ describe('DeliveriesService', () => {
           },
         ],
         relations: ['company', 'occurrences', 'finalization', 'details'],
-        order: { id: 'DESC' },
+        order: { id: 'ASC' },
       });
-      expect(result).toEqual(activeDeliveries);
+      expect(mockRepository.count).toHaveBeenCalledWith({
+        where: { companyId: 2, id: expect.any(Object) },
+      });
+      expect(result).toEqual([
+        { ...activeDeliveries[0], companySequence: 3 },
+        { ...activeDeliveries[1], companySequence: 4 },
+      ]);
     });
 
     it('deve lancar NotFoundException quando o usuario nao possui perfil de motorista', async () => {

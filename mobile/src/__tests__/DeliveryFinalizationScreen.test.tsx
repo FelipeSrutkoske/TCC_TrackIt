@@ -102,6 +102,41 @@ describe('DeliveryFinalizationScreen', () => {
     expect(mockFinalizeDelivery).not.toHaveBeenCalled();
   });
 
+  it('shows the company delivery sequence while keeping the real id for API calls', async () => {
+    const navigation = { reset: jest.fn() };
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6, accuracy: 12 });
+    mockFinalizeDelivery.mockResolvedValueOnce({ id: 1, deliveryId: 31 });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={navigation}
+          route={{
+            key: 'DeliveryFinalization-31',
+            name: 'DeliveryFinalization',
+            params: { delivery: { ...deliveryFixture, id: 31, companySequence: 1 } },
+          }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Entrega #1')).toHaveStyle({ color: '#39FF14' });
+    expect(screen.queryByText('Entrega #31')).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    await waitFor(() => {
+      expect(mockFinalizeDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({ deliveryId: 31 }),
+        'token-1',
+      );
+    });
+  });
+
   it('disables parent scroll while the user is drawing the signature', () => {
     render(
       <AppThemeProvider>

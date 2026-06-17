@@ -125,12 +125,16 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <View style={[styles.liveDot, { backgroundColor: theme.colors.statusSuccess }]} />
                   <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Hub operacional</Text>
                 </View>
-                <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Ola, {session?.user.nome?.split(' ')[0]}</Text>
-                <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Consulte suas entregas pendentes e em rota, atualize a fila e mantenha o fluxo operacional sob controle.</Text>
+                <Text style={[styles.heroGreeting, { color: theme.colors.accentText }]}>Ola, {session?.user.nome?.split(' ')[0]}</Text>
               </View>
               <View style={[styles.markBadge, { backgroundColor: theme.colors.highlight }]}>
                 <TrackItMark height={44} width={34} />
               </View>
+            </View>
+
+            <View style={styles.contextPanel}>
+              <Text style={[styles.contextLabel, { color: theme.colors.accentText }]}>Resumo operacional</Text>
+              <Text style={[styles.contextText, { color: theme.colors.accentText }]}>Consulte suas entregas, atualize a fila e mantenha o fluxo sob controle.</Text>
             </View>
 
             <View style={styles.heroMetricGrid}>
@@ -282,21 +286,35 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
-  heroTitle: {
-    fontSize: 30,
+  heroGreeting: {
+    fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.8,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    lineHeight: 21,
-    opacity: 0.88,
   },
   markBadge: {
     borderRadius: 18,
     paddingHorizontal: 10,
     paddingVertical: 12,
     alignSelf: 'flex-start',
+  },
+  contextPanel: {
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderRadius: 18,
+    gap: 6,
+    padding: 12,
+  },
+  contextLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    opacity: 0.78,
+    textTransform: 'uppercase',
+  },
+  contextText: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    opacity: 0.88,
   },
   heroMetricGrid: {
     flexDirection: 'row',
@@ -307,8 +325,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     flex: 1,
-    gap: 4,
-    padding: 10,
+    gap: 6,
+    padding: 12,
   },
   heroMetricLabel: {
     fontSize: 10,
@@ -318,8 +336,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   heroMetricValue: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   sectionHeaderRow: {
     alignItems: 'center',

@@ -25,6 +25,7 @@ import { RootStackParamList } from '../navigation/types';
 import { startDelivery } from '../services/deliveries.service';
 import { Delivery } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 import { getCurrentCoordinates } from '../utils/location';
 import { openDeliveryAddressInMaps, openDeliveryDirectionsInMaps } from '../utils/maps';
 
@@ -157,7 +158,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
                 <Text style={[styles.dispatchEyebrow, { color: theme.colors.accentText }]}>Painel da entrega</Text>
               </View>
               <Text style={[styles.dispatchTitle, { color: theme.colors.accentText }]}>Missao operacional</Text>
-              <Text style={[styles.dispatchSubtitle, { color: theme.colors.accentText }]}>Entrega #{delivery.id}</Text>
+              <Text style={[styles.dispatchSubtitle, { color: theme.colors.accentText }]}>{getDeliveryDisplayLabel(delivery)}</Text>
             </View>
             <StatusBadge status={delivery.status} />
           </View>

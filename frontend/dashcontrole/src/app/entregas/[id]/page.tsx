@@ -11,6 +11,7 @@ import {
   DeliveryOccurrence,
   deliveriesService,
   Entrega,
+  getDeliveryDisplayLabel,
   StatusEntrega,
   TipoOcorrencia,
 } from "@/services/deliveries.service";
@@ -317,7 +318,7 @@ export default function DeliveryDetailPage() {
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#6f786d]">Entrega #{delivery.id}</p>
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#6f786d]">{getDeliveryDisplayLabel(delivery)}</p>
                       {status ? <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${status.className}`}>{status.label}</span> : null}
                     </div>
                     <h1 className="mt-3 text-2xl font-black tracking-tight text-[#1f2320] sm:text-3xl">{delivery.destinationAddress}</h1>

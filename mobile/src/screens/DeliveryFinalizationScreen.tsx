@@ -60,6 +60,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { finalizeDelivery } from '../services/finalizations.service';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 import { Coordinates, getCurrentCoordinates } from '../utils/location';
 import { isValidCpf, maskCpf, onlyDigits } from '../utils/masks';
 import { prepareUploadPhoto } from '../utils/uploadPhoto';
@@ -226,9 +227,9 @@ export function DeliveryFinalizationScreen({
                 <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Fechamento operacional</Text>
               </View>
               <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>
-                {route.params.delivery.company?.corporateName ?? `Entrega #${route.params.delivery.id}`}
+                {route.params.delivery.company?.corporateName ?? getDeliveryDisplayLabel(route.params.delivery)}
               </Text>
-              <Text style={[styles.heroSubtitle, styles.deliveryCode]}>Entrega #{route.params.delivery.id}</Text>
+              <Text style={[styles.heroSubtitle, styles.deliveryCode]}>{getDeliveryDisplayLabel(route.params.delivery)}</Text>
             </View>
           </View>
           <View style={styles.heroMetricGrid}>

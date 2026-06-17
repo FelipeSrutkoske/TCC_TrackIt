@@ -48,6 +48,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { createOccurrence, OccurrenceType } from '../services/occurrences.service';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayCode, getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 import { getCurrentCoordinates } from '../utils/location';
 import { prepareUploadPhoto } from '../utils/uploadPhoto';
 
@@ -184,7 +185,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
                 <View style={[styles.liveDot, { backgroundColor: theme.colors.statusDanger }]} />
                 <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Ocorrencia operacional</Text>
               </View>
-              <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Entrega #{route.params.delivery.id}</Text>
+              <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>{getDeliveryDisplayLabel(route.params.delivery)}</Text>
             </View>
           </View>
           <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Registre o problema com GPS e comprovante.</Text>
@@ -195,7 +196,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
             </View>
             <View style={styles.heroMetricBlock}>
               <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Entrega</Text>
-              <Text style={[styles.heroMetricValue, { color: theme.colors.accentText }]}>#{route.params.delivery.id}</Text>
+              <Text style={[styles.heroMetricValue, { color: theme.colors.accentText }]}>#{getDeliveryDisplayCode(route.params.delivery)}</Text>
             </View>
           </View>
           <View style={styles.contextPanel}>

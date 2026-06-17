@@ -5,6 +5,7 @@ import { Delivery, DeliveryStatus } from '../types/delivery';
 import { AppCard } from './AppCard';
 import { StatusBadge } from './StatusBadge';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 
 type DeliveryCardProps = {
   delivery: Delivery;
@@ -43,7 +44,7 @@ export function DeliveryCard({ delivery, onPressDetails, position, totalInQueue 
   const { theme } = useAppTheme();
   const isInRoute = delivery.status === 'EM_ROTA';
   const isAwaiting = delivery.status === 'AGUARDANDO_MOTORISTA';
-  const title = delivery.company?.corporateName ?? `Entrega #${delivery.id}`;
+  const title = delivery.company?.corporateName ?? getDeliveryDisplayLabel(delivery);
   const tradeName = delivery.company?.tradeName?.trim();
   const accentColor = theme.colors[STATUS_ACCENT[delivery.status]];
   const ledColor = theme.colors[STATUS_LED[delivery.status]];

@@ -23,6 +23,7 @@ export interface CompanyAnalytics {
 export interface CompanyWithAnalytics extends CompanyOption {
   deliveries?: Array<{
     id: number;
+    companySequence?: number | null;
     status: string;
     destinationAddress: string;
     createdAt?: string | null;

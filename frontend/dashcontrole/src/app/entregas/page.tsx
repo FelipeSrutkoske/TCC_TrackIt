@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { useToast } from "@/contexts/ToastContext";
-import { deliveriesService, Entrega, StatusEntrega } from "@/services/deliveries.service";
+import { deliveriesService, Entrega, getDeliveryDisplayLabel, StatusEntrega } from "@/services/deliveries.service";
 import { usersService, Usuario } from "@/services/users.service";
 
 // ── Configurações de badge por status Real ───────────────────
@@ -68,7 +68,8 @@ export default function EntregasPage() {
       e.destinationAddress.toLowerCase().includes(texto) ||
       e.status.toLowerCase().includes(texto) ||
       (e.occurrences?.length ? "ocorrencia registrada".includes(texto) : false) ||
-      String(e.id).includes(texto)
+      String(e.id).includes(texto) ||
+      String(e.companySequence ?? "").includes(texto)
     );
   });
 
@@ -161,7 +162,7 @@ export default function EntregasPage() {
               >
                 <div className="w-full text-left">
                   <div className="flex justify-between items-start mb-3">
-                    <span className="text-xs font-bold text-[#8a9488]">ENTREGA #{entrega.id}</span>
+                    <span className="text-xs font-bold text-[#8a9488]">{getDeliveryDisplayLabel(entrega).toUpperCase()}</span>
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${cfg.cor}`}>
                       {cfg.label}
                     </span>

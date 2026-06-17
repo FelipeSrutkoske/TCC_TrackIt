@@ -54,4 +54,24 @@ describe('DeliveryCard', () => {
     expect(screen.getByText('01')).toBeOnTheScreen();
     expect(screen.getByText('Posicao 1 de 3 na fila')).toBeOnTheScreen();
   });
+
+  it('uses the company delivery sequence as the public delivery code', () => {
+    const delivery: Delivery = {
+      id: 31,
+      companySequence: 1,
+      driverId: 701,
+      createdAt: '2026-05-24T10:00:00.000Z',
+      destinationAddress: 'Rua B, 200 - Centro',
+      status: 'AGUARDANDO_MOTORISTA',
+    };
+
+    render(
+      <AppThemeProvider>
+        <DeliveryCard delivery={delivery} onPressDetails={jest.fn()} />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Entrega #1')).toBeOnTheScreen();
+    expect(screen.queryByText('Entrega #31')).toBeNull();
+  });
 });

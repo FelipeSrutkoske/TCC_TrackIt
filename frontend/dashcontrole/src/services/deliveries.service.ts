@@ -80,6 +80,7 @@ export interface DeliveryFinalization {
 
 export interface Entrega {
   id: number;
+  companySequence?: number | null;
   driverId: number | null;
   companyId?: number | null;
   destinationAddress: string;
@@ -108,6 +109,14 @@ export interface Entrega {
   details?: DeliveryDetail[];
   occurrences?: DeliveryOccurrence[];
   finalization?: DeliveryFinalization | null;
+}
+
+export function getDeliveryDisplayCode(delivery: Pick<Entrega, 'id' | 'companySequence'>): number {
+  return delivery.companySequence ?? delivery.id;
+}
+
+export function getDeliveryDisplayLabel(delivery: Pick<Entrega, 'id' | 'companySequence'>): string {
+  return `Entrega #${getDeliveryDisplayCode(delivery)}`;
 }
 
 export interface DeliveryStats {

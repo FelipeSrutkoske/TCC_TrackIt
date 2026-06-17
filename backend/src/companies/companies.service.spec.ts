@@ -90,6 +90,7 @@ describe('CompaniesService', () => {
       gpsDivergent: 1,
       lastDeliveryAt: '2026-06-03T10:00:00.000Z',
     });
+    expect(result[0].deliveries?.map((delivery: Delivery) => delivery.companySequence)).toEqual([1, 2]);
   });
 
   it('deve filtrar analytics por empresa quando escopo informado', async () => {
