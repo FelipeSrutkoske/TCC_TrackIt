@@ -88,6 +88,16 @@ function formatCoordinates(latitude?: number | string | null, longitude?: number
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 }
 
+function getValidOccurrenceCoordinates(latitude?: number | string | null, longitude?: number | string | null) {
+  const lat = toNumber(latitude);
+  const lng = toNumber(longitude);
+
+  if (lat === null || lng === null) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  return { lat, lng };
+}
+
 function getDriverName(delivery: Entrega): string {
   return delivery.driver?.user?.nome ?? "Sem motorista";
 }
@@ -179,6 +189,10 @@ function buildTimeline(delivery: Entrega): TimelineEvent[] {
 }
 
 function OccurrenceCard({ occurrence }: { occurrence: DeliveryOccurrence }) {
+  const coordinates = getValidOccurrenceCoordinates(occurrence.latitude, occurrence.longitude);
+  const mapsUrl = coordinates ? `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}` : null;
+  const mapsEmbedUrl = mapsUrl ? `${mapsUrl}&output=embed` : null;
+
   return (
     <article className="rounded-xl border border-orange-200 bg-orange-50 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -189,10 +203,29 @@ function OccurrenceCard({ occurrence }: { occurrence: DeliveryOccurrence }) {
           <p className="text-xs font-medium text-orange-700">{formatDateTime(occurrence.dataHora)}</p>
         </div>
         <p className="text-xs font-bold text-orange-800">
-          {formatCoordinates(occurrence.latitude, occurrence.longitude)}
+          {coordinates ? `${coordinates.lat.toFixed(6)}, ${coordinates.lng.toFixed(6)}` : "Coordenadas Indisponiveis"}
         </p>
       </div>
       {occurrence.descricao ? <p className="mt-3 text-sm leading-relaxed text-orange-950">{occurrence.descricao}</p> : null}
+      {mapsEmbedUrl && mapsUrl ? (
+        <div className="mt-3 overflow-hidden rounded-lg border border-orange-200 bg-white">
+          <iframe
+            className="h-44 w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={mapsEmbedUrl}
+            title={`Mapa da ocorrencia ${occurrence.id}`}
+          />
+          <a
+            className="block px-3 py-2 text-xs font-black text-orange-800 underline-offset-4 hover:underline"
+            href={mapsUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Abrir no Google Maps
+          </a>
+        </div>
+      ) : null}
       {occurrence.fotoProvaUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img alt="Foto da ocorrencia" className="mt-3 max-h-56 w-full rounded-lg object-cover" src={occurrence.fotoProvaUrl} />

@@ -40,6 +40,26 @@ describe('DeliveryOccurrenceScreen', () => {
     mockCreateOccurrence.mockReset();
   });
 
+  it('exibe apenas os tipos de ocorrencia aprovados para o fluxo mobile', () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryOccurrenceScreen
+          route={{ key: 'DeliveryOccurrence-1', name: 'DeliveryOccurrence', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Destinatario ausente')).toBeOnTheScreen();
+    expect(screen.getByText('Veiculo avariado')).toBeOnTheScreen();
+    expect(screen.getByText('Carga avariada')).toBeOnTheScreen();
+    expect(screen.getByText('Acidente')).toBeOnTheScreen();
+    expect(screen.getByText('Outros')).toBeOnTheScreen();
+
+    expect(screen.queryByText('Endereco nao encontrado')).toBeNull();
+    expect(screen.queryByText('Area insegura')).toBeNull();
+    expect(screen.queryByText('GPS incompativel')).toBeNull();
+  });
+
   it('registra ocorrencia e reseta a pilha para o historico', async () => {
     const reset = jest.fn();
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6 });

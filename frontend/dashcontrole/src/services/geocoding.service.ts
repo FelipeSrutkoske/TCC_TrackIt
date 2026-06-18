@@ -45,7 +45,7 @@ export async function geocodeAddress(address: string): Promise<GeocodingResult |
   const longitude = firstResult?.geometry?.location?.lng;
 
   if (data.status !== 'OK' || typeof latitude !== 'number' || typeof longitude !== 'number') {
-    throw new Error('Nao foi possivel gerar latitude e longitude para o endereco informado.');
+    throw new Error('Não foi possível encontrar o endereço informado. Verifique rua, número, bairro e cidade.');
   }
 
   return {

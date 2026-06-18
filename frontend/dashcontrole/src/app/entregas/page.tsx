@@ -11,6 +11,8 @@ import Link from "next/link";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { useToast } from "@/contexts/ToastContext";
+import { authService } from "@/services/auth.service";
+import { companiesService, CompanyOption } from "@/services/companies.service";
 import { deliveriesService, Entrega, getDeliveryDisplayLabel, StatusEntrega } from "@/services/deliveries.service";
 import { usersService, Usuario } from "@/services/users.service";
 
@@ -31,32 +33,64 @@ const MAX_MOTORISTAS_VISIVEIS = 50;
 
 export default function EntregasPage() {
   const { addToast } = useToast();
+  const [currentUser] = useState(() => authService.getUser());
   const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [empresas, setEmpresas] = useState<CompanyOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [entregaSelecionada, setEntregaSelecionada] = useState<Entrega | null>(null);
   const [modalMotoristasAberto, setModalMotoristasAberto] = useState(false);
+  const [empresaSelecionada, setEmpresaSelecionada] = useState("");
   const [filtro, setFiltro] = useState("");
   const [filtroMotorista, setFiltroMotorista] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const isAdmin = currentUser?.tipoUsuario === "ADMIN";
+  const selectedCompanyId = isAdmin
+    ? empresaSelecionada
+      ? Number(empresaSelecionada)
+      : null
+    : currentUser?.companyId ?? null;
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    void companiesService.getAll()
+      .then(setEmpresas)
+      .catch((err) => {
+        console.error(err instanceof Error ? err.message : "Erro ao carregar empresas");
+      });
+  }, [isAdmin]);
 
   const carregarDados = useCallback(async () => {
+    if (isAdmin && !selectedCompanyId) {
+      setEntregas([]);
+      setUsuarios([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
       const [entregasData, usuariosData] = await Promise.all([
-        deliveriesService.getAll(),
+        deliveriesService.getAll(selectedCompanyId),
         usersService.getAll(),
       ]);
       setEntregas(entregasData);
-      setUsuarios(usuariosData.filter((u) => u.tipoUsuario === "MOTORISTA" && u.driverProfile));
+      setUsuarios(
+        usuariosData.filter((u) => (
+          u.tipoUsuario === "MOTORISTA" &&
+          u.driverProfile &&
+          (!selectedCompanyId || u.companyId === selectedCompanyId)
+        )),
+      );
     } catch (err) {
       console.error(err instanceof Error ? err.message : "Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin, selectedCompanyId]);
 
   useEffect(() => {
     void Promise.resolve().then(carregarDados);
@@ -138,7 +172,24 @@ export default function EntregasPage() {
               <h2 className="text-xl font-bold text-[#1f2320]">Fluxo de Distribuição</h2>
               <p className="text-sm text-[#5f695d]">Gerencie o envio de mercadorias para os motoristas.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {isAdmin ? (
+                <label className="text-xs font-black uppercase tracking-wider text-[#63705f]">
+                  Empresa
+                  <select
+                    className="mt-1 w-full rounded-xl border border-[#c4ccc3] bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-[#1f2320] sm:w-64"
+                    onChange={(event) => setEmpresaSelecionada(event.target.value)}
+                    value={empresaSelecionada}
+                  >
+                    <option value="">Selecione uma empresa</option>
+                    {empresas.map((empresa) => (
+                      <option key={empresa.id} value={empresa.id}>
+                        {empresa.tradeName || empresa.corporateName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <input
                 type="text"
                 placeholder="Pesquisar endereço ou status..."
@@ -150,8 +201,14 @@ export default function EntregasPage() {
           </div>
         </section>
 
+        {isAdmin && !selectedCompanyId ? (
+          <div className="rounded-2xl border border-dashed border-[#c8cec8] bg-[#f8faf8] p-8 text-center text-sm font-bold text-[#748071]">
+            Selecione uma empresa para visualizar as entregas.
+          </div>
+        ) : null}
+
         {/* Lista */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {(!isAdmin || selectedCompanyId) ? <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {entregasFiltradas.map((entrega) => {
             const cfg = CONFIG_STATUS_ENTREGA[entrega.status];
             const nomeMotorista = getNomeMotorista(entrega);
@@ -201,7 +258,7 @@ export default function EntregasPage() {
               </article>
             );
           })}
-        </div>
+        </div> : null}
       </div>
     </div>
 

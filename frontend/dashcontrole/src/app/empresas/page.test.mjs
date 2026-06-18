@@ -22,3 +22,33 @@ test('pagina administrativo usa filtro de empresa para admin e modais para acoes
   assert.match(source, /Criar usuario/);
   assert.doesNotMatch(source, /<form className="rounded-2xl[\s\S]+Cadastrar cliente[\s\S]+<form className="rounded-2xl[\s\S]+Criar usuario/);
 });
+
+test('empresa criada fica disponivel para usuario sem refresh', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+  const createCompanyBlock = source.match(/async function handleCreateCompany[\s\S]+?\n  }\n\n  async function handleCreateUser/);
+
+  assert.ok(createCompanyBlock, 'handleCreateCompany deve existir na pagina administrativo');
+  assert.match(createCompanyBlock[0], /const createdCompany = await companiesService\.create/);
+  assert.match(createCompanyBlock[0], /setCompanyOptions\(\(current\) => \[\.\.\.current, createdCompany\]\)/);
+  assert.match(createCompanyBlock[0], /setEmpresaSelecionada\(String\(createdCompany\.id\)\)/);
+  assert.match(createCompanyBlock[0], /companyId: String\(createdCompany\.id\)/);
+});
+
+test('formulario de motorista normaliza CNH e placa antes de enviar', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /Número de registro da CNH/);
+  assert.match(source, /maxLength=\{11\}/);
+  assert.match(source, /placaVeiculo:\s*normalizeVehiclePlate\(userForm\.placaVeiculo\) \|\| null/);
+  assert.match(source, /function normalizeVehiclePlate/);
+  assert.match(source, /replace\(\/\[\\s-\]\/g, ""\)\.toUpperCase\(\)/);
+});
+
+test('cadastro de usuario e motorista usa feedback especifico', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /Motorista criado com sucesso\./);
+  assert.match(source, /Usuário criado com sucesso\./);
+  assert.match(source, /Já existe um usuário cadastrado com este e-mail\./);
+  assert.match(source, /Nao foi possivel criar usuario\./);
+});

@@ -24,14 +24,16 @@ test('vinculo de motorista so fica disponivel para entrega aguardando motorista'
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /entregaSelecionada\.status !== "AGUARDANDO_MOTORISTA"/);
-  assert.match(source, /disabled=\{salvando \|\| !podeVincularMotorista\}/);
+  assert.match(source, /entrega\.status === "AGUARDANDO_MOTORISTA" \? \(/);
+  assert.match(source, /setModalMotoristasAberto\(true\)/);
 });
 
-test('comprovante pesado so monta quando o modal estiver aberto', () => {
+test('listagem de entregas nao monta comprovante pesado', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
-  const proofModalBlock = source.match(/\{modalComprovanteAberto && entregaSelecionada && \([\s\S]+?<DeliveryProofModal[\s\S]+?\/>(\s+)\)\}/);
 
-  assert.ok(proofModalBlock, 'DeliveryProofModal deve ser montado apenas quando modalComprovanteAberto estiver true');
+  assert.doesNotMatch(source, /DeliveryProofModal/);
+  assert.match(source, /href=\{`\/entregas\/\$\{entrega\.id\}`\}/);
+  assert.match(source, /Abrir pagina completa/);
 });
 
 test('modal de motoristas filtra e limita a lista renderizada', () => {
@@ -41,4 +43,15 @@ test('modal de motoristas filtra e limita a lista renderizada', () => {
   assert.match(source, /filtroMotorista/);
   assert.match(source, /motoristasVisiveis/);
   assert.match(source, /\.slice\(0, MAX_MOTORISTAS_VISIVEIS\)/);
+});
+
+test('admin filtra entregas por empresa antes de renderizar a lista', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /authService\.getUser\(\)/);
+  assert.match(source, /companiesService\.getAll\(\)/);
+  assert.match(source, /empresaSelecionada/);
+  assert.match(source, /selectedCompanyId/);
+  assert.match(source, /deliveriesService\.getAll\(selectedCompanyId\)/);
+  assert.match(source, /Selecione uma empresa para visualizar as entregas\./);
 });

@@ -56,6 +56,10 @@ function normalizarDetalheEntrega(itemDetalheEntrega: DetalheEntregaForm): Creat
   };
 }
 
+function addressHasNumber(address: string): boolean {
+  return /\d/.test(address);
+}
+
 export default function CriarEntregaPage() {
   const router = useRouter();
   const [destinationAddress, setDestinationAddress] = useState("");
@@ -125,6 +129,10 @@ export default function CriarEntregaPage() {
 
     if (!destinationAddress.trim()) {
       return "Informe o endereco de destino.";
+    }
+
+    if (!addressHasNumber(destinationAddress)) {
+      return "Informe o número do endereço para orientar a entrega.";
     }
 
     if (!empresaId) {

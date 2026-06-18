@@ -78,7 +78,8 @@ describe('DeliveryDetailsScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Missao operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Detalhes da entrega')).toBeOnTheScreen();
+    expect(screen.queryByText('Missao operacional')).toBeNull();
     expect(screen.getByText('Painel da entrega')).toBeOnTheScreen();
     expect(screen.getByText('Contexto operacional')).toBeOnTheScreen();
     expect(screen.getByText('Aguardando despacho')).toBeOnTheScreen();

@@ -135,6 +135,11 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
             <Text style={[styles.listHint, { color: theme.colors.textMuted }]}>Toque em cards sinalizados para auditar ocorrencias.</Text>
             {items.map((delivery) => {
               const hasOccurrences = (delivery.occurrences?.length ?? 0) > 0;
+              const isClosedWithOccurrence = delivery.status === 'COM_OCORRENCIA';
+              const closureDateLabel = isClosedWithOccurrence ? 'Ocorrência em' : 'Finalizada em';
+              const closureDate = isClosedWithOccurrence
+                ? getOccurrenceDate(delivery)
+                : delivery.finalization?.finalizedAt;
               const isExpanded = expandedDeliveryId === delivery.id;
 
               return (
@@ -159,8 +164,10 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
                     <StatusBadge status={delivery.status} />
                   </View>
 
-                  {hasOccurrences ? (
-                    <View style={[styles.occurrenceBadge, { backgroundColor: theme.colors.statusDanger }]}>
+                  {hasOccurrences && !isClosedWithOccurrence ? (
+                    <View
+                      style={[styles.occurrenceBadge, { backgroundColor: theme.colors.statusDanger }]}
+                    >
                       <Text style={[styles.occurrenceBadgeText, { color: theme.colors.statusDangerText }]}>Ocorrencia registrada</Text>
                     </View>
                   ) : null}
@@ -171,8 +178,8 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
                       <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.createdAt)}</Text>
                     </View>
                     <View style={styles.timeBlock}>
-                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Finalizada em</Text>
-                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.finalization?.finalizedAt)}</Text>
+                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>{closureDateLabel}</Text>
+                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(closureDate)}</Text>
                     </View>
                   </View>
                   <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Tempo de entrega</Text>
@@ -367,6 +374,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+
+function getOccurrenceDate(delivery: Delivery) {
+  const firstOccurrence = delivery.occurrences?.[0];
+
+  return firstOccurrence?.dataHora ?? firstOccurrence?.createdAt ?? null;
+}
 
 function formatDateTime(value?: string | null) {
   if (!value) {

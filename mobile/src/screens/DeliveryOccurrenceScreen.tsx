@@ -59,12 +59,9 @@ type DeliveryOccurrenceScreenProps = {
 
 const occurrenceOptions: Array<{ label: string; value: OccurrenceType }> = [
   { label: 'Destinatario ausente', value: 'DESTINATARIO_AUSENTE' },
-  { label: 'Endereco nao encontrado', value: 'ENDERECO_NAO_ENCONTRADO' },
   { label: 'Veiculo avariado', value: 'VEICULO_AVARIADO' },
   { label: 'Carga avariada', value: 'CARGA_AVARIADA' },
   { label: 'Acidente', value: 'ACIDENTE' },
-  { label: 'Area insegura', value: 'AREA_INSEGURA' },
-  { label: 'GPS incompativel', value: 'GPS_INCOMPATIVEL' },
   { label: 'Outros', value: 'OUTROS' },
 ];
 

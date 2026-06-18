@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TipoUsuario, User } from './entities/user.entity';
 import { Driver } from './entities/driver.entity';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed_senha'),
@@ -115,6 +115,22 @@ describe('UsersService', () => {
       expect(result.companyId).toBe(1);
     });
 
+    it('deve rejeitar criacao com e-mail ja cadastrado', async () => {
+      mockRepository.findOne.mockResolvedValueOnce({ id: 90, email: 'cliente@test.com' });
+
+      await expect(
+        service.create({
+          nome: 'Cliente Operador',
+          email: 'cliente@test.com',
+          senha: '123456',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          companyId: 1,
+        } as any),
+      ).rejects.toThrow(new ConflictException('Já existe um usuário cadastrado com este e-mail.'));
+
+      expect(mockRepository.create).not.toHaveBeenCalled();
+    });
+
     it('deve rejeitar usuario dashboard sem empresa vinculada', async () => {
       await expect(
         service.create({
@@ -192,6 +208,103 @@ describe('UsersService', () => {
         }),
       );
       expect(result).not.toHaveProperty('senha');
+    });
+
+    it('deve normalizar CNH e placa antes de criar motorista', async () => {
+      mockRepository.save.mockResolvedValueOnce({
+        id: 78,
+        nome: 'Motorista Normalizado',
+        email: 'driver-normalizado@test.com',
+        senha: 'hashed_senha',
+        tipoUsuario: TipoUsuario.MOTORISTA,
+        ativo: true,
+        companyId: 1,
+      });
+
+      await service.create({
+        nome: 'Motorista Normalizado',
+        email: 'driver-normalizado@test.com',
+        senha: '123456',
+        tipoUsuario: TipoUsuario.MOTORISTA,
+        companyId: 1,
+        driverProfile: {
+          cnh: '123.456.789-00',
+          placaVeiculo: 'abc-1234',
+          disponivel: true,
+        },
+      } as any);
+
+      expect(mockDriverRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cnh: '12345678900',
+          placaVeiculo: 'ABC1234',
+        }),
+      );
+    });
+
+    it('deve rejeitar CNH que nao tenha 11 digitos', async () => {
+      await expect(
+        service.create({
+          nome: 'Motorista CNH Invalida',
+          email: 'driver-cnh@test.com',
+          senha: '123456',
+          tipoUsuario: TipoUsuario.MOTORISTA,
+          companyId: 1,
+          driverProfile: {
+            cnh: '1234567890',
+          },
+        } as any),
+      ).rejects.toThrow('Informe um numero valido de registro da CNH.');
+
+      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(mockDriverRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('deve aceitar placa Mercosul normalizada e rejeitar formatos invalidos', async () => {
+      mockRepository.save.mockResolvedValueOnce({
+        id: 79,
+        nome: 'Motorista Placa',
+        email: 'driver-placa@test.com',
+        senha: 'hashed_senha',
+        tipoUsuario: TipoUsuario.MOTORISTA,
+        ativo: true,
+        companyId: 1,
+      });
+
+      await service.create({
+        nome: 'Motorista Placa',
+        email: 'driver-placa@test.com',
+        senha: '123456',
+        tipoUsuario: TipoUsuario.MOTORISTA,
+        companyId: 1,
+        driverProfile: {
+          cnh: '12345678900',
+          placaVeiculo: 'abc 1d23',
+        },
+      } as any);
+
+      expect(mockDriverRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ placaVeiculo: 'ABC1D23' }),
+      );
+
+      jest.clearAllMocks();
+
+      await expect(
+        service.create({
+          nome: 'Motorista Placa Invalida',
+          email: 'driver-placa-invalida@test.com',
+          senha: '123456',
+          tipoUsuario: TipoUsuario.MOTORISTA,
+          companyId: 1,
+          driverProfile: {
+            cnh: '12345678900',
+            placaVeiculo: 'ABCDE12',
+          },
+        } as any),
+      ).rejects.toThrow('Informe uma placa válida no formato ABC1234 ou ABC1D23.');
+
+      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(mockDriverRepository.create).not.toHaveBeenCalled();
     });
 
     it('deve rejeitar motorista sem empresa vinculada', async () => {

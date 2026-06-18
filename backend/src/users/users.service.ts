@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -26,21 +27,29 @@ export class UsersService {
   async create(data: CreateUserDto): Promise<User> {
     const { driverProfile, ...userData } = data;
     const normalizedUserData = this.normalizeUserData(userData);
+    const normalizedDriverProfile = this.normalizeDriverProfile(driverProfile);
 
-    this.validateUserRules({ ...normalizedUserData, driverProfile }, 'create');
+    this.validateUserRules({ ...normalizedUserData, driverProfile: normalizedDriverProfile }, 'create');
+
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: normalizedUserData.email },
+    });
+    if (existingUser) {
+      throw new ConflictException('Já existe um usuário cadastrado com este e-mail.');
+    }
 
     const hash = await bcrypt.hash(data.senha, 10);
     const user = this.usersRepository.create({ ...normalizedUserData, senha: hash });
     const savedUser = await this.usersRepository.save(user);
 
-    if (normalizedUserData.tipoUsuario === TipoUsuario.MOTORISTA && driverProfile) {
+    if (normalizedUserData.tipoUsuario === TipoUsuario.MOTORISTA && normalizedDriverProfile) {
       const savedDriver = await this.driversRepository.save(
         this.driversRepository.create({
           userId: savedUser.id,
-          cnh: driverProfile.cnh,
-          placaVeiculo: driverProfile.placaVeiculo ?? undefined,
-          tipoVeiculo: driverProfile.tipoVeiculo ?? undefined,
-          disponivel: driverProfile.disponivel ?? true,
+          cnh: normalizedDriverProfile.cnh,
+          placaVeiculo: normalizedDriverProfile.placaVeiculo ?? undefined,
+          tipoVeiculo: normalizedDriverProfile.tipoVeiculo ?? undefined,
+          disponivel: normalizedDriverProfile.disponivel ?? true,
         }),
       );
 
@@ -118,9 +127,10 @@ export class UsersService {
     const user = await this.findOne(id);
     const { driverProfile, ...userData } = data;
     const effectiveUserData = this.normalizeUserData({ ...user, ...userData });
-    const effectiveDriverProfile = {
+    const effectiveDriverProfile = this.normalizeDriverProfile({
       cnh: driverProfile?.cnh || user.driverProfile?.cnh,
-    };
+      placaVeiculo: driverProfile?.placaVeiculo || user.driverProfile?.placaVeiculo,
+    });
 
     this.validateUserRules(
       { ...effectiveUserData, driverProfile: effectiveDriverProfile },
@@ -152,7 +162,7 @@ export class UsersService {
     data: {
       tipoUsuario?: TipoUsuario;
       companyId?: number | null;
-      driverProfile?: { cnh?: string | null } | null;
+      driverProfile?: { cnh?: string | null; placaVeiculo?: string | null } | null;
     },
     operation: 'create' | 'update',
   ): void {
@@ -191,6 +201,15 @@ export class UsersService {
       throw new BadRequestException('Informe a CNH para criar um motorista');
     }
 
+    if (data.tipoUsuario === TipoUsuario.MOTORISTA && data.driverProfile?.cnh?.length !== 11) {
+      throw new BadRequestException('Informe um numero valido de registro da CNH.');
+    }
+
+    const placaVeiculo = data.driverProfile?.placaVeiculo;
+    if (data.tipoUsuario === TipoUsuario.MOTORISTA && placaVeiculo && !this.isValidVehiclePlate(placaVeiculo)) {
+      throw new BadRequestException('Informe uma placa válida no formato ABC1234 ou ABC1D23.');
+    }
+
     if (
       operation === 'update' &&
       data.tipoUsuario === TipoUsuario.MOTORISTA &&
@@ -208,5 +227,28 @@ export class UsersService {
     }
 
     return data;
+  }
+
+  private normalizeDriverProfile<T extends {
+    cnh?: string | null;
+    placaVeiculo?: string | null;
+    tipoVeiculo?: string | null;
+    disponivel?: boolean;
+  } | undefined>(driverProfile: T) {
+    if (!driverProfile) return driverProfile;
+
+    const placaVeiculo = driverProfile.placaVeiculo
+      ? driverProfile.placaVeiculo.replace(/[\s-]/g, '').toUpperCase()
+      : null;
+
+    return {
+      ...driverProfile,
+      cnh: driverProfile.cnh ? driverProfile.cnh.replace(/\D/g, '') : driverProfile.cnh,
+      placaVeiculo: placaVeiculo || null,
+    };
+  }
+
+  private isValidVehiclePlate(value: string): boolean {
+    return /^[A-Z]{3}(\d{4}|\d[A-Z]\d{2})$/.test(value);
   }
 }

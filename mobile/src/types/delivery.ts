@@ -20,6 +20,7 @@ export type DeliveryOccurrence = {
   id: number;
   tipoOcorrencia?: string | null;
   descricao?: string | null;
+  dataHora?: string | null;
   createdAt?: string | null;
 };
 

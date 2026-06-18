@@ -57,6 +57,10 @@ function emptyUserForm(tipoUsuario: Usuario["tipoUsuario"], companyId = "") {
   };
 }
 
+function normalizeVehiclePlate(value: string): string {
+  return value.replace(/[\s-]/g, "").toUpperCase();
+}
+
 export default function CompaniesPage() {
   const { addToast } = useToast();
   const [companies, setCompanies] = useState<CompanyWithAnalytics[]>([]);
@@ -151,7 +155,7 @@ export default function CompaniesPage() {
 
     try {
       setSavingCompany(true);
-      await companiesService.create({
+      const createdCompany = await companiesService.create({
         corporateName: companyForm.corporateName.trim(),
         tradeName: companyForm.tradeName.trim() || null,
         cnpj: onlyDigits(companyForm.cnpj) || null,
@@ -159,10 +163,12 @@ export default function CompaniesPage() {
         phone: onlyDigits(companyForm.phone) || null,
         subscriptionStatus: companyForm.subscriptionStatus,
       });
+      setCompanyOptions((current) => [...current, createdCompany]);
+      setEmpresaSelecionada(String(createdCompany.id));
+      setUserForm((current) => ({ ...current, companyId: String(createdCompany.id) }));
       setCompanyForm(emptyCompanyForm);
       setModalEmpresaAberto(false);
       addToast("Cliente cadastrado com sucesso.", "success");
-      setEmpresaSelecionada("");
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Nao foi possivel cadastrar cliente.", "error");
     } finally {
@@ -195,7 +201,7 @@ export default function CompaniesPage() {
           ? {
               driverProfile: {
                 cnh: onlyDigits(userForm.cnh),
-                placaVeiculo: userForm.placaVeiculo.trim().toUpperCase() || null,
+                placaVeiculo: normalizeVehiclePlate(userForm.placaVeiculo) || null,
                 tipoVeiculo: userForm.tipoVeiculo.trim() || null,
                 disponivel: true,
               },
@@ -205,9 +211,10 @@ export default function CompaniesPage() {
       resetUserForm(userForm.tipoUsuario);
       setModalUsuarioAberto(false);
       setModalMotoristaAberto(false);
-      addToast("Usuario criado com sucesso.", "success");
+      addToast(userForm.tipoUsuario === "MOTORISTA" ? "Motorista criado com sucesso." : "Usuário criado com sucesso.", "success");
     } catch (err) {
-      addToast(err instanceof Error ? err.message : "Nao foi possivel criar usuario.", "error");
+      const message = err instanceof Error ? err.message : "Nao foi possivel criar usuario.";
+      addToast(message.includes("e-mail") ? "Já existe um usuário cadastrado com este e-mail." : message, "error");
     } finally {
       setSavingUser(false);
     }
@@ -248,7 +255,7 @@ export default function CompaniesPage() {
         {userForm.tipoUsuario === "MOTORISTA" ? (
           <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:grid-cols-2">
             <label className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400 sm:col-span-2">Dados do motorista</label>
-            <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white" maxLength={20} onChange={(e) => setUserForm((prev) => ({ ...prev, cnh: onlyDigits(e.target.value) }))} placeholder="CNH" required value={userForm.cnh} />
+            <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white" maxLength={11} onChange={(e) => setUserForm((prev) => ({ ...prev, cnh: onlyDigits(e.target.value).slice(0, 11) }))} placeholder="Número de registro da CNH" required value={userForm.cnh} />
             <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm uppercase text-white" maxLength={10} onChange={(e) => setUserForm((prev) => ({ ...prev, placaVeiculo: e.target.value.toUpperCase() }))} placeholder="Placa do veiculo" value={userForm.placaVeiculo} />
             <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white sm:col-span-2" maxLength={50} onChange={(e) => setUserForm((prev) => ({ ...prev, tipoVeiculo: e.target.value }))} placeholder="Tipo do veiculo" value={userForm.tipoVeiculo} />
           </div>

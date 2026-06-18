@@ -157,7 +157,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
                 <View style={[styles.liveDot, { backgroundColor: theme.colors.statusSuccess }]} />
                 <Text style={[styles.dispatchEyebrow, { color: theme.colors.accentText }]}>Painel da entrega</Text>
               </View>
-              <Text style={[styles.dispatchTitle, { color: theme.colors.accentText }]}>Missao operacional</Text>
+              <Text style={[styles.dispatchTitle, { color: theme.colors.accentText }]}>Detalhes da entrega</Text>
               <Text style={[styles.dispatchSubtitle, { color: theme.colors.accentText }]}>{getDeliveryDisplayLabel(delivery)}</Text>
             </View>
             <StatusBadge status={delivery.status} />

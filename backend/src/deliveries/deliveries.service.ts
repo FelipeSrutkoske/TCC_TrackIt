@@ -995,14 +995,22 @@ export class DeliveriesService {
   }
 
   private toDateInput(value: string | undefined, fallback: Date, endOfDay: boolean): string {
-    const date = this.toDate(value) ?? fallback;
-    if (endOfDay) {
-      date.setHours(23, 59, 59, 999);
-    } else {
-      date.setHours(0, 0, 0, 0);
+    if (this.isDateOnlyInput(value)) {
+      const normalized = `${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`;
+      if (this.toDate(normalized)) return normalized;
     }
 
+    const date = this.toDate(value) ?? new Date(fallback);
+    if (value) return date.toISOString();
+
+    if (endOfDay) date.setHours(23, 59, 59, 999);
+    else date.setHours(0, 0, 0, 0);
+
     return date.toISOString();
+  }
+
+  private isDateOnlyInput(value: string | undefined): value is string {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
   }
 
   private toDateKey(value: unknown): string | null {

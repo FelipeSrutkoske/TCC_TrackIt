@@ -439,6 +439,64 @@ describe('DeliveriesService', () => {
       );
     });
 
+    it('deve incluir todo o dia quando startDate e endDate vierem sem horario', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 15,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Inclusiva',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T15:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+      ]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-16',
+        endDate: '2026-06-16',
+      });
+
+      expect(analytics.kpis.totalDeliveries).toBe(1);
+      expect(analytics.filters.startDate).toBe('2026-06-16T00:00:00.000Z');
+      expect(analytics.filters.endDate).toBe('2026-06-16T23:59:59.999Z');
+    });
+
+    it('deve preservar horario explicito nos filtros de periodo', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 16,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Dentro Da Janela',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T15:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+        {
+          id: 17,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Fora Da Janela',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T16:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+      ]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-16T14:00:00.000Z',
+        endDate: '2026-06-16T15:30:00.000Z',
+      });
+
+      expect(analytics.kpis.totalDeliveries).toBe(1);
+      expect(analytics.filters.startDate).toBe('2026-06-16T14:00:00.000Z');
+      expect(analytics.filters.endDate).toBe('2026-06-16T15:30:00.000Z');
+    });
+
     it('deve calcular analytics apenas da empresa escopada', async () => {
       mockRepository.find.mockResolvedValue([]);
 
