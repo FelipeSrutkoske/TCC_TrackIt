@@ -8,7 +8,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { authService } from "@/services/auth.service";
 import { companiesService, CompanyOption, CompanyWithAnalytics } from "@/services/companies.service";
 import { usersService, Usuario } from "@/services/users.service";
-import { maskCnpj, maskPhone, onlyDigits } from "@/utils/masks";
+import { isValidCnpj, maskCnpj, maskCep, maskPhone, onlyDigits } from "@/utils/masks";
 
 function formatPercent(value: number): string {
   return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
@@ -36,12 +36,25 @@ function StatCard({ label, value, detail }: { label: string; value: string | num
 }
 
 const emptyCompanyForm = {
+  cnpj: "",
+  cnpjValid: null as boolean | null,
   corporateName: "",
   tradeName: "",
-  cnpj: "",
-  contactEmail: "",
+  situacaoCnpj: "",
+  cnaePrincipal: "",
+  porte: "",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  uf: "",
+  bairro: "",
+  municipio: "",
+  cep: "",
+  socios: [] as Array<{ nome: string; qualificacao: string }>,
   phone: "",
+  contactEmail: "",
   subscriptionStatus: "ativo" as CompanyOption["subscriptionStatus"],
+  dataLoaded: false,
 };
 
 function emptyUserForm(tipoUsuario: Usuario["tipoUsuario"], companyId = "") {
@@ -74,8 +87,9 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   const [savingUser, setSavingUser] = useState(false);
+  const [lookingUpCnpj, setLookingUpCnpj] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser] = useState<Usuario | null>(() => authService.getUser() as Usuario | null);
+  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const [userForm, setUserForm] = useState(emptyUserForm("DASHBOARD"));
 
@@ -88,6 +102,14 @@ export default function CompaniesPage() {
       : undefined
     : fixedCompanyId ?? undefined;
   const fixedCompanyName = companyOptions.find((company) => company.id === fixedCompanyId);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setCurrentUser(authService.getUser() as Usuario | null);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (!currentUser) {
@@ -130,7 +152,7 @@ export default function CompaniesPage() {
     const matchesText =
       companyName(company).toLowerCase().includes(text) ||
       company.corporateName.toLowerCase().includes(text) ||
-      Boolean(digits && company.cnpj?.includes(digits));
+      Boolean(digits && onlyDigits(company.cnpj ?? "").includes(digits));
     const matchesStatus = !statusFilter || company.subscriptionStatus === statusFilter;
 
     return matchesText && matchesStatus;
@@ -149,18 +171,86 @@ export default function CompaniesPage() {
     setUserForm(emptyUserForm(tipoUsuario, isAdmin ? empresaSelecionada : String(fixedCompanyId ?? "")));
   }
 
+  function handleCnpjChange(value: string) {
+    const cnpj = maskCnpj(value);
+    const digits = onlyDigits(cnpj);
+    const cnpjValid = digits.length === 14 ? isValidCnpj(digits) : null;
+
+    setCompanyForm((prev) => ({ ...prev, cnpj, cnpjValid, dataLoaded: false }));
+
+    if (cnpjValid) {
+      void lookupCompanyByCnpj(cnpj);
+    }
+  }
+
+  async function lookupCompanyByCnpj(cnpjValue = companyForm.cnpj) {
+    const digits = onlyDigits(cnpjValue);
+
+    if (!isValidCnpj(digits)) {
+      setCompanyForm((prev) => ({ ...prev, cnpjValid: false }));
+      addToast("Informe um CNPJ valido para consulta.", "error");
+      return;
+    }
+
+    try {
+      setLookingUpCnpj(true);
+      const data = await companiesService.lookupCnpj(digits);
+      setCompanyForm((prev) => ({
+        ...prev,
+        cnpj: maskCnpj(data.cnpj ?? digits),
+        cnpjValid: true,
+        corporateName: data.corporateName,
+        tradeName: data.tradeName || data.corporateName,
+        situacaoCnpj: data.situacaoCnpj ?? "",
+        cnaePrincipal: data.cnaePrincipal ?? "",
+        porte: data.porte ?? "",
+        cep: maskCep(data.cep ?? ""),
+        logradouro: data.logradouro ?? "",
+        numero: data.numero ?? "",
+        complemento: data.complemento ?? "",
+        bairro: data.bairro ?? "",
+        municipio: data.municipio ?? "",
+        uf: data.uf ?? "",
+        phone: maskPhone(data.phone ?? prev.phone),
+        contactEmail: data.contactEmail ?? prev.contactEmail,
+        dataLoaded: true,
+      }));
+      addToast("Dados do CNPJ carregados com sucesso.", "success");
+    } catch (err) {
+      setCompanyForm((prev) => ({ ...prev, cnpjValid: false, dataLoaded: false }));
+      addToast(err instanceof Error ? err.message : "Nao foi possivel consultar o CNPJ.", "error");
+    } finally {
+      setLookingUpCnpj(false);
+    }
+  }
+
   async function handleCreateCompany(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isAdmin) return;
+
+    if (!isValidCnpj(companyForm.cnpj)) {
+      addToast("Informe um CNPJ valido antes de cadastrar o cliente.", "error");
+      return;
+    }
 
     try {
       setSavingCompany(true);
       const createdCompany = await companiesService.create({
         corporateName: companyForm.corporateName.trim(),
-        tradeName: companyForm.tradeName.trim() || null,
-        cnpj: onlyDigits(companyForm.cnpj) || null,
+        tradeName: companyForm.tradeName.trim() || companyForm.corporateName.trim(),
+        cnpj: onlyDigits(companyForm.cnpj),
+        situacaoCnpj: companyForm.situacaoCnpj.trim() || null,
+        cnaePrincipal: companyForm.cnaePrincipal.trim() || null,
+        porte: companyForm.porte.trim() || null,
         contactEmail: companyForm.contactEmail.trim() || null,
         phone: onlyDigits(companyForm.phone) || null,
+        cep: onlyDigits(companyForm.cep) || null,
+        logradouro: companyForm.logradouro.trim() || null,
+        numero: companyForm.numero.trim() || null,
+        complemento: companyForm.complemento.trim() || null,
+        bairro: companyForm.bairro.trim() || null,
+        municipio: companyForm.municipio.trim() || null,
+        uf: companyForm.uf.trim().toUpperCase() || null,
         subscriptionStatus: companyForm.subscriptionStatus,
       });
       setCompanyOptions((current) => [...current, createdCompany]);
@@ -231,43 +321,117 @@ export default function CompaniesPage() {
 
   function renderUserForm(buttonLabel: string) {
     return (
-      <form className="space-y-3" onSubmit={handleCreateUser}>
-        <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, nome: e.target.value }))} placeholder="Nome completo" required value={userForm.nome} />
-        <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="E-mail" required type="email" value={userForm.email} />
-        <input className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" minLength={6} onChange={(e) => setUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Senha inicial" required type="password" value={userForm.senha} />
+      <form className="space-y-5" onSubmit={handleCreateUser}>
+        <section className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+              <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx={12} cy={7} r={4} /></svg>
+            </span>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Identificação</p>
+              <p className="text-sm font-bold text-[#18231c]">Dados de acesso</p>
+            </div>
+          </div>
 
-        {modalUsuarioAberto && isAdmin ? (
-          <select className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, tipoUsuario: e.target.value as Usuario["tipoUsuario"] }))} value={userForm.tipoUsuario}>
-            <option value="DASHBOARD">Dashboard</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-        ) : null}
+          <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nome completo</label>
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, nome: e.target.value }))} placeholder="Nome completo" required value={userForm.nome} />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">E-mail</label>
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@empresa.com" required type="email" value={userForm.email} />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Senha inicial</label>
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Senha inicial" required type="password" value={userForm.senha} />
+              </div>
+            </div>
+          </div>
+        </section>
 
-        {isAdmin && userForm.tipoUsuario !== "ADMIN" ? (
-          <select className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setUserForm((prev) => ({ ...prev, companyId: e.target.value }))} required value={userForm.companyId}>
-            <option value="">Selecione a empresa</option>
-            {companyOptions.map((company) => (
-              <option key={company.id} value={company.id}>{companyName(company)}</option>
-            ))}
-          </select>
-        ) : null}
+        <section className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+              <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            </span>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Permissão</p>
+              <p className="text-sm font-bold text-[#18231c]">Perfil e empresa</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {modalUsuarioAberto && isAdmin ? (
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Tipo de usuário</label>
+                  <select className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, tipoUsuario: e.target.value as Usuario["tipoUsuario"] }))} value={userForm.tipoUsuario}>
+                    <option value="DASHBOARD">Dashboard</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+              ) : null}
+
+              {isAdmin && userForm.tipoUsuario !== "ADMIN" ? (
+                <div className={modalUsuarioAberto ? "" : "sm:col-span-2"}>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Empresa</label>
+                  <select className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, companyId: e.target.value }))} required value={userForm.companyId}>
+                    <option value="">Selecione a empresa</option>
+                    {companyOptions.map((company) => (
+                      <option key={company.id} value={company.id}>{companyName(company)}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              {!isAdmin && fixedCompanyName ? (
+                <p className="rounded-lg border border-[#c8d7c0] bg-white px-4 py-3 text-xs font-bold text-[#5d6f63] sm:col-span-2">Empresa fixa: {companyName(fixedCompanyName)}</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
 
         {userForm.tipoUsuario === "MOTORISTA" ? (
-          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:grid-cols-2">
-            <label className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400 sm:col-span-2">Dados do motorista</label>
-            <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white" maxLength={11} onChange={(e) => setUserForm((prev) => ({ ...prev, cnh: onlyDigits(e.target.value).slice(0, 11) }))} placeholder="Número de registro da CNH" required value={userForm.cnh} />
-            <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm uppercase text-white" maxLength={10} onChange={(e) => setUserForm((prev) => ({ ...prev, placaVeiculo: e.target.value.toUpperCase() }))} placeholder="Placa do veiculo" value={userForm.placaVeiculo} />
-            <input className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white sm:col-span-2" maxLength={50} onChange={(e) => setUserForm((prev) => ({ ...prev, tipoVeiculo: e.target.value }))} placeholder="Tipo do veiculo" value={userForm.tipoVeiculo} />
-          </div>
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 13h18l-2-5H5z" /><path d="M5 18h.01M19 18h.01" /><path d="M7 13v5M17 13v5" /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Motorista</p>
+                <p className="text-sm font-bold text-[#18231c]">CNH e veículo</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Número de registro da CNH</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={11} onChange={(e) => setUserForm((prev) => ({ ...prev, cnh: onlyDigits(e.target.value).slice(0, 11) }))} placeholder="00000000000" required value={userForm.cnh} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Placa do veículo</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm uppercase text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={10} onChange={(e) => setUserForm((prev) => ({ ...prev, placaVeiculo: e.target.value.toUpperCase() }))} placeholder="ABC1D23" value={userForm.placaVeiculo} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Tipo do veículo</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={50} onChange={(e) => setUserForm((prev) => ({ ...prev, tipoVeiculo: e.target.value }))} placeholder="Moto, carro, van..." value={userForm.tipoVeiculo} />
+                </div>
+              </div>
+            </div>
+          </section>
         ) : null}
 
-        {!isAdmin && fixedCompanyName ? (
-          <p className="rounded-xl bg-zinc-800 px-4 py-3 text-xs font-bold text-zinc-300">Empresa fixa: {companyName(fixedCompanyName)}</p>
-        ) : null}
-
-        <button className="w-full rounded-xl bg-[#a8bc94] px-5 py-2.5 text-sm font-black text-[#1f2320] disabled:opacity-60" disabled={savingUser} type="submit">
-          {savingUser ? "Criando..." : buttonLabel}
-        </button>
+        <div className="flex items-center gap-3 border-t border-[#c8d7c0] pt-4">
+          <button className="flex-1 rounded-xl border border-[#c8d7c0] px-5 py-2.5 text-sm font-bold text-[#5d6f63] transition hover:bg-[#e0eadd]" onClick={() => { setModalUsuarioAberto(false); setModalMotoristaAberto(false); }} type="button">
+            Cancelar
+          </button>
+          <button className="flex-1 rounded-xl bg-[#10935c] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#0d7a4d] disabled:cursor-not-allowed disabled:opacity-50" disabled={savingUser} type="submit">
+            {savingUser ? "Criando..." : buttonLabel}
+          </button>
+        </div>
       </form>
     );
   }
@@ -369,19 +533,266 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      <Modal isOpen={modalEmpresaAberto} onClose={() => setModalEmpresaAberto(false)} title="Cadastrar cliente" description="Criar uma empresa cliente para vincular usuarios e entregas." size="lg">
-        <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={handleCreateCompany}>
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, corporateName: e.target.value }))} placeholder="Razao social" required value={companyForm.corporateName} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, tradeName: e.target.value }))} placeholder="Nome fantasia" value={companyForm.tradeName} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, cnpj: maskCnpj(e.target.value) }))} placeholder="CNPJ" value={companyForm.cnpj} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, contactEmail: e.target.value }))} placeholder="E-mail de contato" type="email" value={companyForm.contactEmail} />
-          <input className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))} placeholder="Telefone" value={companyForm.phone} />
-          <select className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white" onChange={(e) => setCompanyForm((prev) => ({ ...prev, subscriptionStatus: e.target.value as CompanyOption["subscriptionStatus"] }))} value={companyForm.subscriptionStatus}>
-            <option value="ativo">Ativo</option>
-            <option value="inadimplente">Inadimplente</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-          <button className="rounded-xl bg-[#a8bc94] px-5 py-2.5 text-sm font-black text-[#1f2320] disabled:opacity-60 sm:col-span-2" disabled={savingCompany} type="submit">{savingCompany ? "Salvando..." : "Cadastrar cliente"}</button>
+      <Modal isOpen={modalEmpresaAberto} onClose={() => { setModalEmpresaAberto(false); setCompanyForm(emptyCompanyForm); }} title="Cadastrar cliente" description="Consulte o CNPJ para preencher automaticamente via BrasilAPI." size="xl">
+        <form className="space-y-5" onSubmit={handleCreateCompany}>
+
+          {/* ── Seção: Identificação ──────────────────────── */}
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M2 7h20M16 3v4M8 3v4M3 11h18v10H3z" /><path d="m9 16 2 2 4-4" /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Identificação</p>
+                <p className="text-sm font-bold text-[#18231c]">Dados da empresa</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">CNPJ</label>
+                  <div className="relative">
+                    <input
+                      className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 pr-10 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none"
+                      maxLength={18}
+                      onChange={(e) => handleCnpjChange(e.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      required
+                      value={companyForm.cnpj}
+                    />
+                    {companyForm.cnpjValid !== null ? (
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black ${companyForm.cnpjValid ? 'text-[#10935c]' : 'text-red-500'}`}>
+                        {companyForm.cnpjValid ? '✓' : '✕'}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  className="rounded-lg border border-[#10935c] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#10935c] transition hover:bg-[#dff7e7] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={lookingUpCnpj || !isValidCnpj(companyForm.cnpj)}
+                  onClick={() => void lookupCompanyByCnpj()}
+                  type="button"
+                >
+                  {lookingUpCnpj ? "Consultando..." : "Consultar"}
+                </button>
+                {companyForm.situacaoCnpj ? (
+                  <span className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
+                    companyForm.situacaoCnpj.toLowerCase() === 'ativa'
+                      ? 'border border-[#10935c]/30 bg-[#dff7e7] text-[#10935c]'
+                      : 'border border-red-300 bg-red-50 text-red-700'
+                  }`}>
+                    {companyForm.situacaoCnpj}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Razão social</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={companyForm.dataLoaded}
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, corporateName: e.target.value }))}
+                    placeholder="Razão social"
+                    required
+                    value={companyForm.corporateName}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nome fantasia</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={companyForm.dataLoaded}
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, tradeName: e.target.value }))}
+                    placeholder="Nome fantasia"
+                    value={companyForm.tradeName}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">CNAE principal</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={companyForm.dataLoaded}
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, cnaePrincipal: e.target.value }))}
+                    placeholder="—"
+                    value={companyForm.cnaePrincipal}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Porte</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={companyForm.dataLoaded}
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, porte: e.target.value }))}
+                    placeholder="—"
+                    value={companyForm.porte}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Seção: Endereço ───────────────────────────── */}
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx={12} cy={10} r={3} /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Localização</p>
+                <p className="text-sm font-bold text-[#18231c]">Endereço</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3 space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px_80px]">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Logradouro</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, logradouro: e.target.value }))} placeholder="Rua, Av..." value={companyForm.logradouro} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nº</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, numero: e.target.value }))} placeholder="—" value={companyForm.numero} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">UF</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} maxLength={2} onChange={(e) => setCompanyForm((prev) => ({ ...prev, uf: e.target.value.toUpperCase() }))} placeholder="—" value={companyForm.uf} />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Complemento</label>
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, complemento: e.target.value }))} placeholder="Sala, bloco, referencia..." value={companyForm.complemento} />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Bairro</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, bairro: e.target.value }))} placeholder="Bairro" value={companyForm.bairro} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Município</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, municipio: e.target.value }))} placeholder="Cidade" value={companyForm.municipio} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">CEP</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] disabled:opacity-50 disabled:cursor-not-allowed" disabled={companyForm.dataLoaded} onChange={(e) => setCompanyForm((prev) => ({ ...prev, cep: maskCep(e.target.value) }))} placeholder="00000-000" value={companyForm.cep} />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Seção: Quadro Societário ──────────────────── */}
+          {companyForm.socios.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                  <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx={9} cy={7} r={4} /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                </span>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Quadro societário</p>
+                  <p className="text-sm font-bold text-[#18231c]">{companyForm.socios.length} {companyForm.socios.length === 1 ? 'sócio' : 'sócios'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {companyForm.socios.map((socio, index) => (
+                  <div className="flex items-center gap-3 rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3" key={index}>
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-950 text-xs font-black text-emerald-400">
+                      {socio.nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-[#18231c]">{socio.nome}</p>
+                      <p className="truncate text-[11px] text-zinc-500">{socio.qualificacao}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* ── Seção: Contato ────────────────────────────── */}
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Contato</p>
+                <p className="text-sm font-bold text-[#18231c]">Dados editáveis</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Telefone</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none"
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))}
+                    placeholder="(00) 00000-0000"
+                    value={companyForm.phone}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">E-mail</label>
+                  <input
+                    className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none"
+                    onChange={(e) => setCompanyForm((prev) => ({ ...prev, contactEmail: e.target.value }))}
+                    placeholder="contato@empresa.com"
+                    type="email"
+                    value={companyForm.contactEmail}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Seção: Status ─────────────────────────────── */}
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Sistema</p>
+                <p className="text-sm font-bold text-[#18231c]">Status no sistema</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+              <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Status</label>
+              <select
+                className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] focus:border-[#10935c] focus:outline-none"
+                onChange={(e) => setCompanyForm((prev) => ({ ...prev, subscriptionStatus: e.target.value as CompanyOption["subscriptionStatus"] }))}
+                value={companyForm.subscriptionStatus}
+              >
+                <option value="ativo">Ativo</option>
+                <option value="inadimplente">Inadimplente</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+          </section>
+
+          {/* ── Rodapé ────────────────────────────────────── */}
+          <div className="flex items-center gap-3 border-t border-[#c8d7c0] pt-4">
+            <button
+              className="flex-1 rounded-xl border border-[#c8d7c0] px-5 py-2.5 text-sm font-bold text-[#5d6f63] transition hover:bg-[#e0eadd]"
+              onClick={() => { setModalEmpresaAberto(false); setCompanyForm(emptyCompanyForm); }}
+              type="button"
+            >
+              Cancelar
+            </button>
+            <button
+              className="flex-1 rounded-xl bg-[#10935c] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#0d7a4d] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={savingCompany || !companyForm.corporateName.trim() || !isValidCnpj(companyForm.cnpj)}
+              type="submit"
+            >
+              {savingCompany ? "Salvando..." : "Cadastrar cliente"}
+            </button>
+          </div>
         </form>
       </Modal>
 

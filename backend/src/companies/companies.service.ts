@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -8,6 +8,7 @@ import {
 import { Delivery, StatusEntrega } from '../deliveries/entities/delivery.entity';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import type { CompanyScope } from '../common/company-scope';
+import { isValidCnpj, onlyDigits } from '../common/validators/br-documents';
 
 interface CompanyAnalytics {
   totalDeliveries: number;
@@ -30,12 +31,28 @@ export class CompaniesService {
   ) {}
 
   async create(data: CreateCompanyDto): Promise<Company> {
+    const cnpj = onlyDigits(data.cnpj ?? '');
+
+    if (!isValidCnpj(cnpj)) {
+      throw new BadRequestException('Informe um CNPJ valido.');
+    }
+
     const company = this.companiesRepository.create({
-      corporateName: data.corporateName,
-      tradeName: data.tradeName ?? undefined,
-      cnpj: data.cnpj ?? undefined,
+      corporateName: data.corporateName.trim(),
+      tradeName: data.tradeName?.trim() || data.corporateName.trim(),
+      cnpj,
+      situacaoCnpj: data.situacaoCnpj?.trim() || undefined,
+      cnaePrincipal: data.cnaePrincipal?.trim() || undefined,
+      porte: data.porte?.trim() || undefined,
       contactEmail: data.contactEmail ?? undefined,
-      phone: data.phone ?? undefined,
+      phone: onlyDigits(data.phone ?? '') || undefined,
+      cep: onlyDigits(data.cep ?? '') || undefined,
+      logradouro: data.logradouro?.trim() || undefined,
+      numero: data.numero?.trim() || undefined,
+      complemento: data.complemento?.trim() || undefined,
+      bairro: data.bairro?.trim() || undefined,
+      municipio: data.municipio?.trim() || undefined,
+      uf: data.uf?.trim().toUpperCase() || undefined,
       subscriptionStatus:
         data.subscriptionStatus ?? CompanySubscriptionStatus.ATIVO,
       registeredAt: new Date(),

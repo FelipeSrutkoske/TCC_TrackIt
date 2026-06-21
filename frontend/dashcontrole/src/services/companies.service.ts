@@ -5,9 +5,19 @@ export interface CompanyOption {
   corporateName: string;
   tradeName?: string | null;
   cnpj?: string | null;
+  situacaoCnpj?: string | null;
+  cnaePrincipal?: string | null;
+  porte?: string | null;
   contactEmail?: string | null;
   subscriptionStatus: 'ativo' | 'inadimplente' | 'cancelado';
   phone?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
   registeredAt?: string | null;
 }
 
@@ -42,10 +52,22 @@ export type CreateCompanyDto = {
   corporateName: string;
   tradeName?: string | null;
   cnpj?: string | null;
+  situacaoCnpj?: string | null;
+  cnaePrincipal?: string | null;
+  porte?: string | null;
   contactEmail?: string | null;
   phone?: string | null;
+  cep?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
   subscriptionStatus?: CompanyOption['subscriptionStatus'];
 };
+
+export type CompanyCnpjLookup = Omit<CompanyOption, 'id' | 'subscriptionStatus' | 'registeredAt'>;
 
 function withCompanyQuery(path: string, companyId?: number | null): string {
   if (!companyId) return path;
@@ -63,6 +85,10 @@ export const companiesService = {
 
   getByIdAnalytics(id: number): Promise<CompanyWithAnalytics> {
     return apiFetch<CompanyWithAnalytics>(`/companies/${id}/analytics`);
+  },
+
+  lookupCnpj(cnpj: string): Promise<CompanyCnpjLookup> {
+    return apiFetch<CompanyCnpjLookup>(`/companies/cnpj/${cnpj}`);
   },
 
   create(data: CreateCompanyDto): Promise<CompanyOption> {

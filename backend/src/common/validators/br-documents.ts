@@ -15,6 +15,20 @@ export function isValidCpf(value: string): boolean {
   return cpf[9] === String(firstDigit) && cpf[10] === String(secondDigit);
 }
 
+function calculateCpfDigit(
+  cpf: string,
+  length: number,
+  weight: number,
+): number {
+  const total = cpf
+    .slice(0, length)
+    .split('')
+    .reduce((sum, digit, index) => sum + Number(digit) * (weight - index), 0);
+  const rest = total % 11;
+
+  return rest < 2 ? 0 : 11 - rest;
+}
+
 export function isValidCnpj(value: string): boolean {
   const cnpj = onlyDigits(value);
 
@@ -30,20 +44,6 @@ export function isValidCnpj(value: string): boolean {
 
 function hasOnlyRepeatedDigits(value: string): boolean {
   return /^(\d)\1+$/.test(value);
-}
-
-function calculateCpfDigit(
-  cpf: string,
-  length: number,
-  weight: number,
-): number {
-  const total = cpf
-    .slice(0, length)
-    .split('')
-    .reduce((sum, digit, index) => sum + Number(digit) * (weight - index), 0);
-  const rest = total % 11;
-
-  return rest < 2 ? 0 : 11 - rest;
 }
 
 function calculateCnpjDigit(base: string): number {
