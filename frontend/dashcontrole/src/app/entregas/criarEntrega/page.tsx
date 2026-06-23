@@ -95,6 +95,15 @@ export default function CriarEntregaPage() {
       });
   }, []);
 
+  const motoristasDaEmpresaSelecionada = empresaId
+    ? motoristasDisponiveis.filter((motorista) => Number(motorista.companyId) === Number(empresaId))
+    : [];
+
+  function selecionarEmpresaEntrega(value: string) {
+    setEmpresaId(value);
+    setMotoristaId("");
+  }
+
   function adicionarDetalheEntrega() {
     setDetalhesEntrega((detalhesAtuais) => [
       ...detalhesAtuais,
@@ -266,7 +275,7 @@ export default function CriarEntregaPage() {
                 <select
                   className="mt-2 w-full rounded-xl border border-[#c4ccc3] bg-white px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
                   disabled={carregandoEmpresas}
-                  onChange={(event) => setEmpresaId(event.target.value)}
+                  onChange={(event) => selecionarEmpresaEntrega(event.target.value)}
                   value={empresaId}
                 >
                   <option value="">Selecione a empresa</option>
@@ -301,7 +310,7 @@ export default function CriarEntregaPage() {
                   value={motoristaId}
                 >
                   <option value="">Sem motorista vinculado</option>
-                  {motoristasDisponiveis.map((motorista) => (
+                  {motoristasDaEmpresaSelecionada.map((motorista) => (
                     <option key={motorista.id} value={motorista.driverProfile?.id ?? ""}>
                       {motorista.nome}
                       {motorista.driverProfile?.placaVeiculo

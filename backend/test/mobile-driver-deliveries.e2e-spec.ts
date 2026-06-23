@@ -16,6 +16,7 @@ import {
   StatusEntrega,
 } from '../src/deliveries/entities/delivery.entity';
 import { Company } from '../src/deliveries/entities/company.entity';
+import { Driver } from '../src/users/entities/driver.entity';
 import { FinalizationsController } from '../src/finalizations/finalizations.controller';
 import { FinalizationsService } from '../src/finalizations/finalizations.service';
 import { Finalization } from '../src/finalizations/entities/finalization.entity';
@@ -87,6 +88,10 @@ const mockRepository = {
 };
 
 const mockCompanyRepository = {
+  findOne: jest.fn(),
+};
+
+const mockDriverRepository = {
   findOne: jest.fn(),
 };
 
@@ -476,6 +481,10 @@ class TestJwtAuthGuard implements CanActivate {
     {
       provide: getRepositoryToken(Company),
       useValue: mockCompanyRepository,
+    },
+    {
+      provide: getRepositoryToken(Driver),
+      useValue: mockDriverRepository,
     },
     {
       provide: getRepositoryToken(Finalization),

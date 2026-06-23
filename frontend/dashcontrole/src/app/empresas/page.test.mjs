@@ -52,3 +52,28 @@ test('cadastro de usuario e motorista usa feedback especifico', () => {
   assert.match(source, /Já existe um usuário cadastrado com este e-mail\./);
   assert.match(source, /Nao foi possivel criar usuario\./);
 });
+
+test('controle de usuarios permite editar acessos operacionais sem listar admin', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /Controle de usuários/);
+  assert.match(source, /usuariosOperacionais/);
+  assert.match(source, /usuario\.tipoUsuario !== "ADMIN"/);
+  assert.match(source, /usersService\.getAll\(\)/);
+  assert.match(source, /usersService\.update/);
+  assert.match(source, /modalEditarUsuarioAberto/);
+  assert.match(source, /Editar acesso/);
+  assert.match(source, /Dashboard/);
+  assert.match(source, /Motorista/);
+});
+
+test('secoes de usuarios e carteira sao drops expansiveis com seta e usuarios ordenados por tipo', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /expandedSections/);
+  assert.match(source, /setExpandedSections/);
+  assert.match(source, /ChevronDownIcon/);
+  assert.match(source, /rotate-180/);
+  assert.match(source, /sort\(/);
+  assert.match(source, /usuariosOrdenados/);
+});

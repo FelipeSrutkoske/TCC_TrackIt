@@ -126,6 +126,11 @@ export class UsersService {
   async update(id: number, data: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
     const { driverProfile, ...userData } = data;
+
+    if (user.tipoUsuario === TipoUsuario.ADMIN) {
+      throw new ForbiddenException('Acesso de administrador nao pode ser alterado.');
+    }
+
     const effectiveUserData = this.normalizeUserData({ ...user, ...userData });
     const effectiveDriverProfile = this.normalizeDriverProfile({
       cnh: driverProfile?.cnh || user.driverProfile?.cnh,
@@ -136,6 +141,20 @@ export class UsersService {
       { ...effectiveUserData, driverProfile: effectiveDriverProfile },
       'update',
     );
+
+    if (userData.email && userData.email !== user.email) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { email: userData.email },
+      });
+
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Já existe um usuário cadastrado com este e-mail.');
+      }
+    }
+
+    if ('senha' in userData && !userData.senha) {
+      delete userData.senha;
+    }
 
     if (userData.senha) {
       userData.senha = await bcrypt.hash(userData.senha, 10);

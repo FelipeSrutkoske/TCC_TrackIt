@@ -14,6 +14,7 @@ import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { StartDeliveryDto } from './dto/start-delivery.dto';
 import { DeliveryAnalyticsQueryDto } from './dto/delivery-analytics-query.dto';
 import { UsersService } from '../users/users.service';
+import { Driver } from '../users/entities/driver.entity';
 import type { CompanyScope } from '../common/company-scope';
 
 interface DeliveryAnalyticsFilters {
@@ -154,6 +155,8 @@ export class DeliveriesService {
     private readonly deliveriesRepository: Repository<Delivery>,
     @InjectRepository(Company)
     private readonly companiesRepository: Repository<Company>,
+    @InjectRepository(Driver)
+    private readonly driversRepository: Repository<Driver>,
     private readonly usersService: UsersService,
     private readonly dataSource: DataSource,
   ) {}
@@ -193,6 +196,10 @@ export class DeliveriesService {
 
     if (!company) {
       throw new BadRequestException('Empresa selecionada nao encontrada');
+    }
+
+    if (motoristaId !== undefined) {
+      await this.validateDriverBelongsToCompany(motoristaId, companyId);
     }
 
     const createdDeliveryId = await this.dataSource.transaction(
@@ -553,6 +560,24 @@ export class DeliveriesService {
     }
 
     return driverId;
+  }
+
+  private async validateDriverBelongsToCompany(
+    driverId: number,
+    companyId: number,
+  ): Promise<void> {
+    const driver = await this.driversRepository.findOne({
+      where: { id: driverId },
+      relations: ['user'],
+    });
+
+    if (!driver) {
+      throw new BadRequestException('Motorista selecionado nao encontrado.');
+    }
+
+    if (driver.user?.companyId !== companyId) {
+      throw new BadRequestException('Motorista selecionado pertence a outra empresa.');
+    }
   }
 
   private normalizeAnalyticsFilters(

@@ -3,7 +3,12 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TipoUsuario, User } from './entities/user.entity';
 import { Driver } from './entities/driver.entity';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed_senha'),
@@ -404,6 +409,95 @@ describe('UsersService', () => {
   });
 
   describe('update', () => {
+    it('deve rejeitar alteracao de acesso ADMIN', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 1,
+        nome: 'Admin Master',
+        email: 'admin@test.com',
+        tipoUsuario: TipoUsuario.ADMIN,
+        companyId: null,
+      });
+
+      await expect(
+        service.update(1, { email: 'admin-novo@test.com' } as any),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('deve atualizar email status e senha criptografada do usuario operacional', async () => {
+      mockRepository.findOne
+        .mockResolvedValueOnce({
+          id: 1,
+          nome: 'Operador Antigo',
+          email: 'operador@test.com',
+          senha: 'senha_antiga',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          ativo: true,
+          companyId: 1,
+        })
+        .mockResolvedValueOnce(null);
+
+      const result = await service.update(1, {
+        email: 'operador.novo@test.com',
+        senha: 'nova-senha',
+        ativo: false,
+      } as any);
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('nova-senha', 10);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'operador.novo@test.com',
+          senha: 'hashed_senha',
+          ativo: false,
+        }),
+      );
+      expect(result).not.toHaveProperty('senha');
+    });
+
+    it('deve rejeitar email duplicado ao atualizar usuario operacional', async () => {
+      mockRepository.findOne
+        .mockResolvedValueOnce({
+          id: 1,
+          nome: 'Operador',
+          email: 'operador@test.com',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          ativo: true,
+          companyId: 1,
+        })
+        .mockResolvedValueOnce({ id: 2, email: 'duplicado@test.com' });
+
+      await expect(
+        service.update(1, { email: 'duplicado@test.com' } as any),
+      ).rejects.toThrow(new ConflictException('Já existe um usuário cadastrado com este e-mail.'));
+
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('deve ignorar senha vazia ao atualizar usuario operacional', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 1,
+        nome: 'Operador',
+        email: 'operador@test.com',
+        senha: 'senha_antiga',
+        tipoUsuario: TipoUsuario.DASHBOARD,
+        ativo: true,
+        companyId: 1,
+      });
+
+      await service.update(1, { nome: 'Operador Atualizado', senha: '' } as any);
+
+      expect(bcrypt.hash).not.toHaveBeenCalled();
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nome: 'Operador Atualizado',
+        }),
+      );
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.not.objectContaining({ senha: '' }),
+      );
+    });
+
     it('deve persistir empresa nula ao alterar usuario para ADMIN mesmo com companyId informado', async () => {
       mockRepository.findOne.mockResolvedValue({
         id: 1,
@@ -490,13 +584,13 @@ describe('UsersService', () => {
     it('deve rejeitar alteracao para DASHBOARD sem empresa vinculada', async () => {
       mockRepository.findOne.mockResolvedValue({
         id: 1,
-        nome: 'Admin Teste',
-        tipoUsuario: TipoUsuario.ADMIN,
+        nome: 'Cliente Operador',
+        tipoUsuario: TipoUsuario.DASHBOARD,
         companyId: null,
       });
 
       await expect(
-        service.update(1, { tipoUsuario: TipoUsuario.DASHBOARD } as any),
+        service.update(1, { nome: 'Cliente Operador Atualizado' } as any),
       ).rejects.toThrow(BadRequestException);
 
       expect(mockRepository.save).not.toHaveBeenCalled();

@@ -403,6 +403,50 @@ describe('Users CRUD (e2e)', () => {
     expect(users.get(1)?.nome).toBe('Usuario Atualizado');
   });
 
+  it('atualiza acesso operacional com email status e senha via PATCH /users/:id', async () => {
+    await request(app.getHttpServer())
+      .patch('/users/1')
+      .set('x-test-user-role', TipoUsuario.ADMIN)
+      .send({
+        email: 'operador.atualizado@test.com',
+        senha: 'nova-senha-123',
+        ativo: false,
+      })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          id: 1,
+          email: 'operador.atualizado@test.com',
+          ativo: false,
+        });
+        expect(response.body).not.toHaveProperty('senha');
+      });
+
+    expect(users.get(1)?.email).toBe('operador.atualizado@test.com');
+    expect(users.get(1)?.ativo).toBe(false);
+    expect(users.get(1)?.senha).not.toBe('nova-senha-123');
+  });
+
+  it('retorna 403 ao tentar alterar acesso ADMIN', async () => {
+    users.set(3, {
+      id: 3,
+      nome: 'Admin Master',
+      email: 'admin.master@test.com',
+      senha: 'hashed_senha',
+      tipoUsuario: TipoUsuario.ADMIN,
+      ativo: true,
+      companyId: null,
+    });
+
+    await request(app.getHttpServer())
+      .patch('/users/3')
+      .set('x-test-user-role', TipoUsuario.ADMIN)
+      .send({ email: 'admin.alterado@test.com' })
+      .expect(403);
+
+    expect(users.get(3)?.email).toBe('admin.master@test.com');
+  });
+
   it('retorna 403 ao tentar alterar usuario sem papel admin', async () => {
     await request(app.getHttpServer())
       .patch('/users/1')

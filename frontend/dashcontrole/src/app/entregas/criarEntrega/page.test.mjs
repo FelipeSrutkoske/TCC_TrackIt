@@ -12,3 +12,12 @@ test('criacao de entrega valida numero no endereco antes do geocoding', () => {
   assert.match(validationBlock[0], /Informe o número do endereço para orientar a entrega\./);
   assert.match(source, /const erroValidacao = validarFormularioCriarEntrega\(\);[\s\S]+?if \(erroValidacao\)[\s\S]+?return;[\s\S]+?geocodeAddress\(destinationAddress\)/);
 });
+
+test('criacao de entrega lista apenas motoristas da empresa selecionada', () => {
+  const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /motoristasDaEmpresaSelecionada/);
+  assert.match(source, /Number\(motorista\.companyId\) === Number\(empresaId\)/);
+  assert.match(source, /motoristasDaEmpresaSelecionada\.map/);
+  assert.match(source, /setMotoristaId\(""\)/);
+});

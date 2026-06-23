@@ -11,11 +11,14 @@ import {
 import { UsersService } from '../users/users.service';
 import { DeliveryDetail } from './entities/delivery-detail.entity';
 import { Company } from './entities/company.entity';
+import { Driver } from '../users/entities/driver.entity';
 
 describe('DeliveriesService', () => {
   let service: DeliveriesService;
   let mockRepository: any;
   let mockDeliveryDetailRepository: any;
+  let mockDriverRepository: any;
+  let mockCompaniesRepository: any;
   let mockUsersService: any;
   let mockDataSource: any;
 
@@ -34,6 +37,14 @@ describe('DeliveriesService', () => {
     mockDeliveryDetailRepository = {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn().mockImplementation((data) => Promise.resolve(data)),
+    };
+
+    mockDriverRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 4, user: { companyId: 1 } }),
+    };
+
+    mockCompaniesRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 1 }),
     };
 
     mockUsersService = {
@@ -61,9 +72,11 @@ describe('DeliveriesService', () => {
         },
         {
           provide: getRepositoryToken(Company),
-          useValue: {
-            findOne: jest.fn().mockResolvedValue({ id: 1 }),
-          },
+          useValue: mockCompaniesRepository,
+        },
+        {
+          provide: getRepositoryToken(Driver),
+          useValue: mockDriverRepository,
         },
         {
           provide: getRepositoryToken(DeliveryDetail),
@@ -176,6 +189,31 @@ describe('DeliveriesService', () => {
       expect(mockRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ companyId: 1 }),
       );
+    });
+
+    it('deve rejeitar motorista vinculado a outra empresa ao criar entrega', async () => {
+      const dto = {
+        destinationAddress: 'Rua Empresa Errada',
+        motoristaId: 4,
+        empresaId: 1,
+        detalhesEntrega: [
+          {
+            descricao: 'Caixa',
+            quantidade: 1,
+          },
+        ],
+      };
+      mockDriverRepository.findOne.mockResolvedValue({
+        id: 4,
+        user: {
+          companyId: 2,
+        },
+      });
+
+      await expect(service.create(dto as any)).rejects.toThrow(
+        'Motorista selecionado pertence a outra empresa.',
+      );
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
     });
 
     it('deve rejeitar criacao sem detalhes da entrega', async () => {

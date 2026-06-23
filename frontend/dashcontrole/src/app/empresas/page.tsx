@@ -7,7 +7,7 @@ import { Modal } from "../components/Modal";
 import { useToast } from "@/contexts/ToastContext";
 import { authService } from "@/services/auth.service";
 import { companiesService, CompanyOption, CompanyWithAnalytics } from "@/services/companies.service";
-import { usersService, Usuario } from "@/services/users.service";
+import { usersService, UpdateUsuarioDto, Usuario } from "@/services/users.service";
 import { isValidCnpj, maskCnpj, maskCep, maskPhone, onlyDigits } from "@/utils/masks";
 
 function formatPercent(value: number): string {
@@ -32,6 +32,51 @@ function StatCard({ label, value, detail }: { label: string; value: string | num
       <p className="mt-3 text-3xl font-black text-[#1f2320]">{value}</p>
       <p className="mt-1 text-xs font-medium text-[#5f695d]">{detail}</p>
     </article>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" height={20} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={20}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function ExpandableSection({
+  children,
+  description,
+  eyebrow,
+  expanded,
+  onToggle,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  eyebrow: string;
+  expanded: boolean;
+  onToggle: () => void;
+  title: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-[#c8cec8] bg-white p-5 shadow-sm">
+      <button
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-4 text-left"
+        onClick={onToggle}
+        type="button"
+      >
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f654b]">{eyebrow}</p>
+          <h2 className="text-lg font-black text-[#1f2320]">{title}</h2>
+          <p className="text-sm text-[#748071]">{description}</p>
+        </div>
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#f3f7f1]">
+          <ChevronDownIcon className={`text-[#4f654b] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+        </span>
+      </button>
+      {expanded ? <div className="mt-5">{children}</div> : null}
+    </section>
   );
 }
 
@@ -70,6 +115,16 @@ function emptyUserForm(tipoUsuario: Usuario["tipoUsuario"], companyId = "") {
   };
 }
 
+const emptyEditUserForm = {
+  id: 0,
+  nome: "",
+  email: "",
+  senha: "",
+  tipoUsuario: "DASHBOARD" as Usuario["tipoUsuario"],
+  ativo: true,
+  companyId: "",
+};
+
 function normalizeVehiclePlate(value: string): string {
   return value.replace(/[\s-]/g, "").toUpperCase();
 }
@@ -78,20 +133,25 @@ export default function CompaniesPage() {
   const { addToast } = useToast();
   const [companies, setCompanies] = useState<CompanyWithAnalytics[]>([]);
   const [companyOptions, setCompanyOptions] = useState<CompanyOption[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [empresaSelecionada, setEmpresaSelecionada] = useState("");
   const [modalEmpresaAberto, setModalEmpresaAberto] = useState(false);
   const [modalUsuarioAberto, setModalUsuarioAberto] = useState(false);
   const [modalMotoristaAberto, setModalMotoristaAberto] = useState(false);
+  const [modalEditarUsuarioAberto, setModalEditarUsuarioAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   const [savingUser, setSavingUser] = useState(false);
+  const [savingEditUser, setSavingEditUser] = useState(false);
   const [lookingUpCnpj, setLookingUpCnpj] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const [userForm, setUserForm] = useState(emptyUserForm("DASHBOARD"));
+  const [editUserForm, setEditUserForm] = useState(emptyEditUserForm);
+  const [expandedSections, setExpandedSections] = useState({ users: false, companies: false });
 
   const isAdmin = currentUser?.tipoUsuario === "ADMIN";
   const isDashboard = currentUser?.tipoUsuario === "DASHBOARD";
@@ -122,14 +182,16 @@ export default function CompaniesPage() {
       try {
         setLoading(true);
         setError(null);
-        const [options, analytics] = await Promise.all([
+        const [options, analytics, loadedUsers] = await Promise.all([
           companiesService.getAll(isAdmin ? undefined : fixedCompanyId),
           companiesService.getAnalytics(selectedCompanyId),
+          usersService.getAll(),
         ]);
 
         if (!active) return;
         setCompanyOptions(options);
         setCompanies(analytics);
+        setUsuarios(loadedUsers);
       } catch (err) {
         if (active) {
           setError(err instanceof Error ? err.message : "Nao foi possivel carregar administrativo.");
@@ -166,6 +228,24 @@ export default function CompaniesPage() {
     }),
     { deliveries: 0, occurrences: 0, delayed: 0, gps: 0 },
   );
+  const usuariosOperacionais = usuarios.filter((usuario) => {
+    if (usuario.tipoUsuario !== "ADMIN") {
+      return !selectedCompanyId || usuario.companyId === selectedCompanyId;
+    }
+
+    return false;
+  });
+
+  const usuariosOrdenados = [...usuariosOperacionais].sort((a, b) => {
+    if (a.tipoUsuario === b.tipoUsuario) return 0;
+    return a.tipoUsuario === "MOTORISTA" ? -1 : 1;
+  });
+
+  function userTypeLabel(tipoUsuario: Usuario["tipoUsuario"]): string {
+    if (tipoUsuario === "MOTORISTA") return "Motorista";
+    if (tipoUsuario === "DASHBOARD") return "Dashboard";
+    return "Admin";
+  }
 
   function resetUserForm(tipoUsuario: Usuario["tipoUsuario"]) {
     setUserForm(emptyUserForm(tipoUsuario, isAdmin ? empresaSelecionada : String(fixedCompanyId ?? "")));
@@ -215,7 +295,7 @@ export default function CompaniesPage() {
         contactEmail: data.contactEmail ?? prev.contactEmail,
         dataLoaded: true,
       }));
-      addToast("Dados do CNPJ carregados com sucesso.", "success");
+      addToast("Dados do CNPJ encontrado.", "success");
     } catch (err) {
       setCompanyForm((prev) => ({ ...prev, cnpjValid: false, dataLoaded: false }));
       addToast(err instanceof Error ? err.message : "Nao foi possivel consultar o CNPJ.", "error");
@@ -229,7 +309,7 @@ export default function CompaniesPage() {
     if (!isAdmin) return;
 
     if (!isValidCnpj(companyForm.cnpj)) {
-      addToast("Informe um CNPJ valido antes de cadastrar o cliente.", "error");
+      addToast("Informe um CNPJ valido para cadastro do cliente.", "error");
       return;
     }
 
@@ -310,6 +390,60 @@ export default function CompaniesPage() {
     }
   }
 
+  function openEditUserModal(usuario: Usuario) {
+    if (usuario.tipoUsuario === "ADMIN") return;
+
+    setEditUserForm({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      senha: "",
+      tipoUsuario: usuario.tipoUsuario,
+      ativo: usuario.ativo,
+      companyId: usuario.companyId ? String(usuario.companyId) : "",
+    });
+    setModalEditarUsuarioAberto(true);
+  }
+
+  async function handleUpdateUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editUserForm.id || editUserForm.tipoUsuario === "ADMIN") return;
+
+    const companyId = Number(editUserForm.companyId || fixedCompanyId);
+    if (!companyId || Number.isNaN(companyId)) {
+      addToast("Selecione a empresa do usuario.", "error");
+      return;
+    }
+
+    const payload: UpdateUsuarioDto = {
+      nome: editUserForm.nome.trim(),
+      email: editUserForm.email.trim(),
+      ativo: editUserForm.ativo,
+      companyId,
+    };
+
+    if (editUserForm.senha.trim()) {
+      payload.senha = editUserForm.senha;
+    }
+
+    try {
+      setSavingEditUser(true);
+      const updatedUser = await usersService.update(editUserForm.id, payload);
+      setUsuarios((current) =>
+        current.map((usuario) => (usuario.id === updatedUser.id ? updatedUser : usuario)),
+      );
+      setModalEditarUsuarioAberto(false);
+      setEditUserForm(emptyEditUserForm);
+      addToast("Acesso atualizado com sucesso.", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Nao foi possivel atualizar acesso.";
+      addToast(message.includes("e-mail") ? "Já existe um usuário cadastrado com este e-mail." : message, "error");
+    } finally {
+      setSavingEditUser(false);
+    }
+  }
+
   function openUserModal(tipoUsuario: Usuario["tipoUsuario"]) {
     resetUserForm(tipoUsuario);
     if (tipoUsuario === "MOTORISTA") {
@@ -329,7 +463,7 @@ export default function CompaniesPage() {
             </span>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Identificação</p>
-              <p className="text-sm font-bold text-[#18231c]">Dados de acesso</p>
+              <p className="text-sm font-bold text-[#18231c]">Dados do usuario</p>
             </div>
           </div>
 
@@ -341,11 +475,11 @@ export default function CompaniesPage() {
               </div>
               <div>
                 <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">E-mail</label>
-                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@empresa.com" required type="email" value={userForm.email} />
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@sua-empresa.com" required type="email" value={userForm.email} />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Senha inicial</label>
-                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Senha inicial" required type="password" value={userForm.senha} />
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Senha</label>
+                <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Senha" required type="password" value={userForm.senha} />
               </div>
             </div>
           </div>
@@ -417,7 +551,7 @@ export default function CompaniesPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Tipo do veículo</label>
-                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={50} onChange={(e) => setUserForm((prev) => ({ ...prev, tipoVeiculo: e.target.value }))} placeholder="Moto, carro, van..." value={userForm.tipoVeiculo} />
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={50} onChange={(e) => setUserForm((prev) => ({ ...prev, tipoVeiculo: e.target.value }))} placeholder="Moto, carro..." value={userForm.tipoVeiculo} />
                 </div>
               </div>
             </div>
@@ -438,15 +572,15 @@ export default function CompaniesPage() {
 
   return (
     <>
-      <Header title="Administrativo" breadcrumb={["Home", "Administrativo"]} />
+      <Header title={isAdmin ? "Administrativo" : "Configuracoes"} breadcrumb={["Home", isAdmin ? "Administrativo" : "Configuracoes"]} />
       <div className="page-body">
         <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
           <section className="rounded-3xl border border-[#c8cec8] bg-[linear-gradient(135deg,#eff6ff_0%,#f2f5f2_100%)] p-6 shadow-sm sm:p-8">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#315c92]">Administrativo</p>
-                <h1 className="mt-2 text-2xl font-black text-[#1f2320] sm:text-3xl">Empresas, acessos e escopo operacional</h1>
-                <p className="mt-2 max-w-3xl text-sm text-[#5f695d]">Controle clientes e usuarios sem misturar cadastro com analise. O backend limita dados pela empresa do usuario.</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#315c92]">{isAdmin ? "Administrativo" : "Configuracoes"}</p>
+                <h1 className="mt-2 text-2xl font-black text-[#1f2320] sm:text-3xl">{isAdmin ? "Empresas, acessos de usuario e configuracoes" : "Acessos e configuracoes da empresa"}</h1>
+                <p className="mt-2 max-w-3xl text-sm text-[#5f695d]">{isAdmin ? "Configuracoes administrativas e controle de acesso." : "Gerencie usuarios dados administrativos."}</p>
               </div>
               {isAdmin ? (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
@@ -472,19 +606,19 @@ export default function CompaniesPage() {
 
           <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isAdmin ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
             {isAdmin ? (
-              <StatCard label="Empresas" value={loading ? "..." : companies.length} detail={!empresaSelecionada ? "Carteira carregada" : "Escopo atual"} />
+              <StatCard label="Empresas" value={loading ? "..." : companies.length} detail={!empresaSelecionada ? "Empresas carregadas" : "Acesso atual"} />
             ) : null}
             <StatCard label="Entregas" value={loading ? "..." : totals.deliveries} detail="Volume operacional" />
-            <StatCard label="Ocorrencias" value={loading ? "..." : totals.occurrences} detail="Registros no escopo" />
-            <StatCard label="GPS divergente" value={loading ? "..." : totals.gps} detail="Finalizacoes fora do raio" />
+            <StatCard label="Ocorrencias" value={loading ? "..." : totals.occurrences} detail="Registros nessa empresa" />
+            <StatCard label="GPS divergente" value={loading ? "..." : totals.gps} detail="Finalizacoes fora do raio permitido" />
           </section>
 
           <section className="rounded-2xl border border-[#c8cec8] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f654b]">Acoes</p>
-                 <h2 className="mt-1 text-lg font-black text-[#1f2320]">{isAdmin ? "Cadastros" : "Cadastros da empresa"}</h2>
-                 <p className="text-sm text-[#748071]">{isAdmin ? "Cadastre clientes e acessos administrativos em fluxos dedicados." : "Cadastre operadores e motoristas vinculados automaticamente a sua empresa."}</p>
+                 <h2 className="mt-1 text-lg font-black text-[#1f2320]">{isAdmin ? "Cadastros" : "Cadastros de usuarios"}</h2>
+                 <p className="text-sm text-[#748071]">{isAdmin ? "Cadastre clientes e acessos administrativos." : "Cadastre operadores e motoristas."}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 {isAdmin ? (
@@ -500,13 +634,50 @@ export default function CompaniesPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#c8cec8] bg-[#f8faf8] p-5 shadow-sm">
-            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-lg font-black text-[#1f2320]">Carteira operacional</h2>
-                <p className="text-sm text-[#748071]">{isAdmin ? "Lista refletindo o escopo selecionado." : "Indicadores operacionais da sua empresa."}</p>
-              </div>
+          <ExpandableSection
+            description="Edite acessos ao sistema."
+            eyebrow="Acessos"
+            expanded={expandedSections.users}
+            onToggle={() => setExpandedSections((prev) => ({ ...prev, users: !prev.users }))}
+            title="Controle de usuários"
+          >
+            {!usuariosOrdenados.length ? (
+              <p className="rounded-xl border border-dashed border-[#c8cec8] p-5 text-center text-sm text-[#748071]">Nenhum usuário operacional encontrado.</p>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {usuariosOrdenados.map((usuario) => (
+                <article className="rounded-xl border border-[#d8ddd8] bg-[#f8faf8] p-4" key={usuario.id}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-black text-[#1f2320]">{usuario.nome}</p>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${usuario.tipoUsuario === "MOTORISTA" ? "bg-[#1f2320] text-white" : "bg-[#dff7e7] text-[#10935c]"}`}>
+                          {userTypeLabel(usuario.tipoUsuario)}
+                        </span>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${usuario.ativo ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"}`}>
+                          {usuario.ativo ? "Ativo" : "Inativo"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs font-medium text-[#748071]">{usuario.email}</p>
+                      <p className="mt-1 text-xs text-[#748071]">Empresa: {companyOptions.find((company) => company.id === usuario.companyId)?.tradeName ?? companyOptions.find((company) => company.id === usuario.companyId)?.corporateName ?? "Nao vinculada"}</p>
+                    </div>
+                    <button className="rounded-xl border border-[#4f654b] px-4 py-2 text-xs font-black text-[#4f654b] transition hover:bg-[#e0eadd]" onClick={() => openEditUserModal(usuario)} type="button">
+                      Editar acesso
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
+          </ExpandableSection>
+
+          <ExpandableSection
+            description={isAdmin ? "Dados das empresas clientes." : "Dados da empresa."}
+            eyebrow={isAdmin ? "Clientes" : "Empresa"}
+            expanded={expandedSections.companies}
+            onToggle={() => setExpandedSections((prev) => ({ ...prev, companies: !prev.companies }))}
+            title={isAdmin ? "Empresas cadastradas" : (fixedCompanyName ? companyName(fixedCompanyName) : "Empresa")}
+          >
             {loading ? <p className="text-sm font-bold text-[#748071]">Carregando...</p> : null}
             {!loading && !filtered.length ? <p className="rounded-xl border border-dashed border-[#c8cec8] p-6 text-center text-sm text-[#748071]">Nenhuma empresa encontrada.</p> : null}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -529,7 +700,7 @@ export default function CompaniesPage() {
                 </Link>
               ))}
             </div>
-          </section>
+          </ExpandableSection>
         </div>
       </div>
 
@@ -791,6 +962,66 @@ export default function CompaniesPage() {
               type="submit"
             >
               {savingCompany ? "Salvando..." : "Cadastrar cliente"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={modalEditarUsuarioAberto} onClose={() => { setModalEditarUsuarioAberto(false); setEditUserForm(emptyEditUserForm); }} title="Editar acesso" description="Altere nome, e-mail, senha e status de usuarios operacionais. Admins nao sao editaveis por aqui." size="lg">
+        <form className="space-y-5" onSubmit={handleUpdateUser}>
+          <section className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#c8d7c0] bg-[#e0eadd]">
+                <svg className="h-4 w-4 text-[#10935c]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx={12} cy={7} r={4} /></svg>
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Acesso operacional</p>
+                <p className="text-sm font-bold text-[#18231c]">{userTypeLabel(editUserForm.tipoUsuario)}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#c8d7c0] bg-[#f3f7f1] p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nome completo</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setEditUserForm((prev) => ({ ...prev, nome: e.target.value }))} placeholder="Nome completo" required value={editUserForm.nome} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">E-mail</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" onChange={(e) => setEditUserForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@empresa.com" required type="email" value={editUserForm.email} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nova senha</label>
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setEditUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Preencha apenas se for trocar" type="password" value={editUserForm.senha} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Status</label>
+                  <select className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] focus:border-[#10935c] focus:outline-none" onChange={(e) => setEditUserForm((prev) => ({ ...prev, ativo: e.target.value === "true" }))} value={String(editUserForm.ativo)}>
+                    <option value="true">Ativo</option>
+                    <option value="false">Inativo</option>
+                  </select>
+                </div>
+                {isAdmin ? (
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Empresa</label>
+                    <select className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] focus:border-[#10935c] focus:outline-none" onChange={(e) => setEditUserForm((prev) => ({ ...prev, companyId: e.target.value }))} required value={editUserForm.companyId}>
+                      <option value="">Selecione a empresa</option>
+                      {companyOptions.map((company) => (
+                        <option key={company.id} value={company.id}>{companyName(company)}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <div className="flex items-center gap-3 border-t border-[#c8d7c0] pt-4">
+            <button className="flex-1 rounded-xl border border-[#c8d7c0] px-5 py-2.5 text-sm font-bold text-[#5d6f63] transition hover:bg-[#e0eadd]" onClick={() => { setModalEditarUsuarioAberto(false); setEditUserForm(emptyEditUserForm); }} type="button">
+              Cancelar
+            </button>
+            <button className="flex-1 rounded-xl bg-[#10935c] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#0d7a4d] disabled:cursor-not-allowed disabled:opacity-50" disabled={savingEditUser} type="submit">
+              {savingEditUser ? "Salvando..." : "Salvar acesso"}
             </button>
           </div>
         </form>
