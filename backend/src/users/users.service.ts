@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,6 +18,8 @@ import { resolveCompanyScope } from '../common/company-scope';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -41,6 +44,10 @@ export class UsersService {
     const hash = await bcrypt.hash(data.senha, 10);
     const user = this.usersRepository.create({ ...normalizedUserData, senha: hash });
     const savedUser = await this.usersRepository.save(user);
+
+    this.logger.log(
+      `Usuario criado id=${savedUser.id} email=${savedUser.email} tipo=${savedUser.tipoUsuario}${savedUser.companyId ? ` companyId=${savedUser.companyId}` : ''}`,
+    );
 
     if (normalizedUserData.tipoUsuario === TipoUsuario.MOTORISTA && normalizedDriverProfile) {
       const savedDriver = await this.driversRepository.save(

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -25,6 +25,8 @@ export interface CompanyWithAnalytics extends Company {
 
 @Injectable()
 export class CompaniesService {
+  private readonly logger = new Logger(CompaniesService.name);
+
   constructor(
     @InjectRepository(Company)
     private readonly companiesRepository: Repository<Company>,
@@ -58,7 +60,13 @@ export class CompaniesService {
       registeredAt: new Date(),
     });
 
-    return this.companiesRepository.save(company);
+    const savedCompany = await this.companiesRepository.save(company);
+
+    this.logger.log(
+      `Empresa criada id=${savedCompany.id} cnpj=${savedCompany.cnpj} nome=${savedCompany.corporateName}`,
+    );
+
+    return savedCompany;
   }
 
   findAll(scope?: CompanyScope): Promise<Company[]> {
