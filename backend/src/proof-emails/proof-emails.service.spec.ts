@@ -78,7 +78,7 @@ describe('DeliveryProofEmailsService', () => {
   });
 
   it('deve registrar SEM_DESTINATARIO quando entrega e empresa nao possuem email', async () => {
-    mockDeliveriesService.findOne.mockResolvedValue({ id: 7, company: {} });
+    mockDeliveriesService.findOne.mockResolvedValue({ id: 7, company: {}, finalization: { id: 1 } });
 
     const result = await service.sendDeliveryProof(7);
 
@@ -93,7 +93,7 @@ describe('DeliveryProofEmailsService', () => {
 
   it('deve listar historico e reenviar para email manual', async () => {
     mockRepository.find.mockResolvedValue([{ id: 3, emailDestino: 'cliente@empresa.com' }]);
-    mockDeliveriesService.findOne.mockResolvedValue({ id: 8, company: { contactEmail: 'padrao@empresa.com' } });
+    mockDeliveriesService.findOne.mockResolvedValue({ id: 8, company: { contactEmail: 'padrao@empresa.com' }, finalization: { id: 1 } });
     process.env.PROOF_EMAIL_ENABLED = 'false';
 
     const history = await service.findByDelivery(8);
@@ -144,7 +144,7 @@ describe('DeliveryProofEmailsService', () => {
     await service.sendDeliveryProof(21);
 
     const message = mockSendMail.mock.calls[0][0];
-    expect(message.html).toContain('Comprovante de entrega #21');
+    expect(message.html).toContain('Comprovante de entrega');
     expect(message.html).toContain('cid:delivery-map-21');
     expect(message.html).toContain('cid:delivery-signature-21');
     expect(message.html).not.toContain('<svg');

@@ -13,6 +13,8 @@ describe('CompaniesService', () => {
 
   beforeEach(async () => {
     mockCompaniesRepository = {
+      create: jest.fn().mockImplementation((data) => data),
+      save: jest.fn().mockImplementation((data) => Promise.resolve({ id: 9, ...data })),
       find: jest.fn(),
       findOne: jest.fn(),
     };
@@ -88,5 +90,52 @@ describe('CompaniesService', () => {
       gpsDivergent: 1,
       lastDeliveryAt: '2026-06-03T10:00:00.000Z',
     });
+    expect(result[0].deliveries?.map((delivery: Delivery) => delivery.companySequence)).toEqual([1, 2]);
+  });
+
+  it('deve filtrar analytics por empresa quando escopo informado', async () => {
+    mockCompaniesRepository.find.mockResolvedValue([]);
+
+    await service.findAllWithAnalytics({ companyId: 1, isGlobal: false });
+
+    expect(mockCompaniesRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 1 } }),
+    );
+  });
+
+  it('deve listar apenas empresa do escopo quando usuario nao for global', async () => {
+    mockCompaniesRepository.find.mockResolvedValue([]);
+
+    await service.findAll({ companyId: 1, isGlobal: false });
+
+    expect(mockCompaniesRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 1,
+          subscriptionStatus: CompanySubscriptionStatus.ATIVO,
+        },
+      }),
+    );
+  });
+
+  it('deve cadastrar cliente com status ativo e data de cadastro padrao', async () => {
+    const result = await service.create({
+      corporateName: 'Cliente Master LTDA',
+      tradeName: 'Cliente Master',
+      cnpj: '11.222.333/0001-81',
+      contactEmail: 'cliente@example.com',
+      phone: '(11) 99999-9999',
+    } as any);
+
+    expect(mockCompaniesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        corporateName: 'Cliente Master LTDA',
+        tradeName: 'Cliente Master',
+        subscriptionStatus: CompanySubscriptionStatus.ATIVO,
+        registeredAt: expect.any(Date),
+      }),
+    );
+    expect(mockCompaniesRepository.save).toHaveBeenCalled();
+    expect(result.id).toBe(9);
   });
 });

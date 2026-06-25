@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Header } from "../../components/Header";
 import { companiesService, CompanyWithAnalytics } from "@/services/companies.service";
+import { getDeliveryDisplayLabel } from "@/services/deliveries.service";
 
 function formatPercent(value: number): string {
   return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
@@ -111,7 +112,7 @@ export default function CompanyDetailPage() {
                       <Link className="block rounded-xl border border-[#d8ddd8] bg-white p-4 hover:bg-[#f2f5f2]" href={`/entregas/${delivery.id}`} key={delivery.id}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-sm font-black text-[#1f2320]">Entrega #{delivery.id}</p>
+                            <p className="text-sm font-black text-[#1f2320]">{getDeliveryDisplayLabel(delivery)}</p>
                             <p className="mt-1 text-xs text-[#748071]">{delivery.destinationAddress}</p>
                           </div>
                           <span className="rounded-full border border-[#d8ddd8] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#5f695d]">{delivery.status}</span>

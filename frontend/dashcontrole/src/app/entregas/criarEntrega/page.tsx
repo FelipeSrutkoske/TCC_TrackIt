@@ -9,21 +9,32 @@ import {
   deliveriesService,
 } from "@/services/deliveries.service";
 import { companiesService, CompanyOption } from "@/services/companies.service";
+import { useToast } from "@/contexts/ToastContext";
 import { geocodeAddress } from "@/services/geocoding.service";
 import { usersService, Usuario } from "@/services/users.service";
 
-const detalheEntregaInicial: CreateDeliveryDetailInput = {
-  descricao: "",
-  categoria: "Geral",
-  pesoKg: 0,
-  volumeM3: 0,
-  quantidade: 1,
-  valorDeclarado: 0,
+type DetalheEntregaForm = Omit<
+  CreateDeliveryDetailInput,
+  "pesoKg" | "volumeM3" | "quantidade" | "valorDeclarado"
+> & {
+  pesoKg: string;
+  volumeM3: string;
+  quantidade: string;
+  valorDeclarado: string;
 };
 
-type CampoDetalheEntrega = keyof CreateDeliveryDetailInput;
+const detalheEntregaInicial: DetalheEntregaForm = {
+  descricao: "",
+  categoria: "Geral",
+  pesoKg: "",
+  volumeM3: "",
+  quantidade: "1",
+  valorDeclarado: "0",
+};
 
-function criarDetalheEntregaVazio(): CreateDeliveryDetailInput {
+type CampoDetalheEntrega = keyof DetalheEntregaForm;
+
+function criarDetalheEntregaVazio(): DetalheEntregaForm {
   return { ...detalheEntregaInicial };
 }
 
@@ -31,13 +42,33 @@ function numeroValidoMaiorQueZero(valor: number): boolean {
   return Number.isFinite(valor) && valor > 0;
 }
 
+function parseNumeroFormulario(valor: string): number {
+  return Number(valor.replace(",", "."));
+}
+
+function normalizarDetalheEntrega(itemDetalheEntrega: DetalheEntregaForm): CreateDeliveryDetailInput {
+  return {
+    categoria: itemDetalheEntrega.categoria?.trim() || "Geral",
+    descricao: itemDetalheEntrega.descricao.trim(),
+    pesoKg: parseNumeroFormulario(itemDetalheEntrega.pesoKg),
+    volumeM3: parseNumeroFormulario(itemDetalheEntrega.volumeM3),
+    quantidade: Number(itemDetalheEntrega.quantidade),
+    valorDeclarado: parseNumeroFormulario(itemDetalheEntrega.valorDeclarado),
+  };
+}
+
+function addressHasNumber(address: string): boolean {
+  return /\d/.test(address);
+}
+
 export default function CriarEntregaPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [destinationAddress, setDestinationAddress] = useState("");
   const [deliveryEstimate, setDeliveryEstimate] = useState("");
   const [motoristaId, setMotoristaId] = useState("");
   const [empresaId, setEmpresaId] = useState("");
-  const [detalhesEntrega, setDetalhesEntrega] = useState<CreateDeliveryDetailInput[]>([
+  const [detalhesEntrega, setDetalhesEntrega] = useState<DetalheEntregaForm[]>([
     criarDetalheEntregaVazio(),
   ]);
   const [motoristasDisponiveis, setMotoristasDisponiveis] = useState<Usuario[]>([]);
@@ -66,6 +97,15 @@ export default function CriarEntregaPage() {
       });
   }, []);
 
+  const motoristasDaEmpresaSelecionada = empresaId
+    ? motoristasDisponiveis.filter((motorista) => Number(motorista.companyId) === Number(empresaId))
+    : [];
+
+  function selecionarEmpresaEntrega(value: string) {
+    setEmpresaId(value);
+    setMotoristaId("");
+  }
+
   function adicionarDetalheEntrega() {
     setDetalhesEntrega((detalhesAtuais) => [
       ...detalhesAtuais,
@@ -84,7 +124,7 @@ export default function CriarEntregaPage() {
   function atualizarDetalheEntrega(
     indiceDetalhe: number,
     campo: CampoDetalheEntrega,
-    valor: string | number,
+    valor: string,
   ) {
     setDetalhesEntrega((detalhesAtuais) =>
       detalhesAtuais.map((itemDetalheEntrega, indiceAtual) =>
@@ -96,8 +136,14 @@ export default function CriarEntregaPage() {
   }
 
   function validarFormularioCriarEntrega(): string | null {
+    const detalhesNormalizados = detalhesEntrega.map(normalizarDetalheEntrega);
+
     if (!destinationAddress.trim()) {
       return "Informe o endereco de destino.";
+    }
+
+    if (!addressHasNumber(destinationAddress)) {
+      return "Informe o número do endereço para localizar o destino corretamente. Ex.: Rua das Flores, 123.";
     }
 
     if (!empresaId) {
@@ -115,10 +161,10 @@ export default function CriarEntregaPage() {
     if (
       detalhesEntrega.some(
         (itemDetalheEntrega) =>
-          !numeroValidoMaiorQueZero(itemDetalheEntrega.pesoKg) ||
-          !numeroValidoMaiorQueZero(itemDetalheEntrega.volumeM3) ||
-          !Number.isInteger(itemDetalheEntrega.quantidade) ||
-          itemDetalheEntrega.quantidade <= 0,
+          !numeroValidoMaiorQueZero(parseNumeroFormulario(itemDetalheEntrega.pesoKg)) ||
+          !numeroValidoMaiorQueZero(parseNumeroFormulario(itemDetalheEntrega.volumeM3)) ||
+          !Number.isInteger(Number(itemDetalheEntrega.quantidade)) ||
+          Number(itemDetalheEntrega.quantidade) <= 0,
       )
     ) {
       return "Peso, volume e quantidade devem ser maiores que zero.";
@@ -126,9 +172,9 @@ export default function CriarEntregaPage() {
 
     if (
       detalhesEntrega.some(
-        (itemDetalheEntrega) =>
-          !Number.isFinite(itemDetalheEntrega.valorDeclarado) ||
-          itemDetalheEntrega.valorDeclarado < 0,
+        (_itemDetalheEntrega, indiceDetalhe) =>
+          !Number.isFinite(detalhesNormalizados[indiceDetalhe].valorDeclarado) ||
+          detalhesNormalizados[indiceDetalhe].valorDeclarado < 0,
       )
     ) {
       return "Valor declarado nao pode ser negativo.";
@@ -165,18 +211,14 @@ export default function CriarEntregaPage() {
           : {}),
         ...(deliveryEstimate ? { deliveryEstimate: new Date(deliveryEstimate).toISOString() } : {}),
         status: "AGUARDANDO_MOTORISTA",
-        detalhesEntrega: detalhesEntrega.map((itemDetalheEntrega) => ({
-          ...itemDetalheEntrega,
-          categoria: itemDetalheEntrega.categoria?.trim() || "Geral",
-          descricao: itemDetalheEntrega.descricao.trim(),
-        })),
+        detalhesEntrega: detalhesEntrega.map(normalizarDetalheEntrega),
       });
 
+      addToast("Entrega criada com sucesso.", "success");
       router.push("/entregas");
     } catch (erro) {
-      setErroCriacaoEntrega(
-        erro instanceof Error ? erro.message : "Nao foi possivel criar a entrega.",
-      );
+      const mensagemErro = erro instanceof Error ? erro.message : "Nao foi possivel criar a entrega.";
+      setErroCriacaoEntrega(mensagemErro);
     } finally {
       setSalvandoEntrega(false);
     }
@@ -235,7 +277,7 @@ export default function CriarEntregaPage() {
                 <select
                   className="mt-2 w-full rounded-xl border border-[#c4ccc3] bg-white px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
                   disabled={carregandoEmpresas}
-                  onChange={(event) => setEmpresaId(event.target.value)}
+                  onChange={(event) => selecionarEmpresaEntrega(event.target.value)}
                   value={empresaId}
                 >
                   <option value="">Selecione a empresa</option>
@@ -270,7 +312,7 @@ export default function CriarEntregaPage() {
                   value={motoristaId}
                 >
                   <option value="">Sem motorista vinculado</option>
-                  {motoristasDisponiveis.map((motorista) => (
+                  {motoristasDaEmpresaSelecionada.map((motorista) => (
                     <option key={motorista.id} value={motorista.driverProfile?.id ?? ""}>
                       {motorista.nome}
                       {motorista.driverProfile?.placaVeiculo
@@ -357,13 +399,13 @@ export default function CriarEntregaPage() {
                       </span>
                       <input
                         className="mt-2 w-full rounded-xl border border-[#c4ccc3] px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
-                        min="0"
+                        inputMode="decimal"
                         onChange={(event) =>
-                          atualizarDetalheEntrega(indiceDetalhe, "pesoKg", event.target.valueAsNumber)
+                          atualizarDetalheEntrega(indiceDetalhe, "pesoKg", event.target.value)
                         }
-                        step="0.001"
-                        type="number"
-                        value={itemDetalheEntrega.pesoKg || ""}
+                        placeholder="0.3"
+                        type="text"
+                        value={itemDetalheEntrega.pesoKg}
                       />
                     </label>
 
@@ -373,13 +415,13 @@ export default function CriarEntregaPage() {
                       </span>
                       <input
                         className="mt-2 w-full rounded-xl border border-[#c4ccc3] px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
-                        min="0"
+                        inputMode="decimal"
                         onChange={(event) =>
-                          atualizarDetalheEntrega(indiceDetalhe, "volumeM3", event.target.valueAsNumber)
+                          atualizarDetalheEntrega(indiceDetalhe, "volumeM3", event.target.value)
                         }
-                        step="0.0001"
-                        type="number"
-                        value={itemDetalheEntrega.volumeM3 || ""}
+                        placeholder="0.3"
+                        type="text"
+                        value={itemDetalheEntrega.volumeM3}
                       />
                     </label>
 
@@ -391,11 +433,11 @@ export default function CriarEntregaPage() {
                         className="mt-2 w-full rounded-xl border border-[#c4ccc3] px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
                         min="1"
                         onChange={(event) =>
-                          atualizarDetalheEntrega(indiceDetalhe, "quantidade", event.target.valueAsNumber)
+                          atualizarDetalheEntrega(indiceDetalhe, "quantidade", event.target.value)
                         }
                         step="1"
                         type="number"
-                        value={itemDetalheEntrega.quantidade || ""}
+                        value={itemDetalheEntrega.quantidade}
                       />
                     </label>
 
@@ -405,17 +447,16 @@ export default function CriarEntregaPage() {
                       </span>
                       <input
                         className="mt-2 w-full rounded-xl border border-[#c4ccc3] px-4 py-3 text-sm text-[#1f2320] outline-none focus:border-[#4f654b]"
-                        min="0"
+                        inputMode="decimal"
                         onChange={(event) =>
                           atualizarDetalheEntrega(
                             indiceDetalhe,
                             "valorDeclarado",
-                            event.target.valueAsNumber,
+                            event.target.value,
                           )
                         }
-                        step="0.01"
-                        type="number"
-                        value={itemDetalheEntrega.valorDeclarado || ""}
+                        type="text"
+                        value={itemDetalheEntrega.valorDeclarado}
                       />
                     </label>
                   </div>

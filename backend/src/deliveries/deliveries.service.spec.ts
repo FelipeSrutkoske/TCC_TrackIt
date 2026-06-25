@@ -11,11 +11,14 @@ import {
 import { UsersService } from '../users/users.service';
 import { DeliveryDetail } from './entities/delivery-detail.entity';
 import { Company } from './entities/company.entity';
+import { Driver } from '../users/entities/driver.entity';
 
 describe('DeliveriesService', () => {
   let service: DeliveriesService;
   let mockRepository: any;
   let mockDeliveryDetailRepository: any;
+  let mockDriverRepository: any;
+  let mockCompaniesRepository: any;
   let mockUsersService: any;
   let mockDataSource: any;
 
@@ -34,6 +37,14 @@ describe('DeliveriesService', () => {
     mockDeliveryDetailRepository = {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn().mockImplementation((data) => Promise.resolve(data)),
+    };
+
+    mockDriverRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 4, user: { companyId: 1 } }),
+    };
+
+    mockCompaniesRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 1 }),
     };
 
     mockUsersService = {
@@ -61,9 +72,11 @@ describe('DeliveriesService', () => {
         },
         {
           provide: getRepositoryToken(Company),
-          useValue: {
-            findOne: jest.fn().mockResolvedValue({ id: 1 }),
-          },
+          useValue: mockCompaniesRepository,
+        },
+        {
+          provide: getRepositoryToken(Driver),
+          useValue: mockDriverRepository,
         },
         {
           provide: getRepositoryToken(DeliveryDetail),
@@ -149,6 +162,60 @@ describe('DeliveriesService', () => {
       expect(result.details).toHaveLength(1);
     });
 
+    it('deve criar entrega na empresa do escopo ignorando empresa enviada no payload', async () => {
+      const dto = {
+        destinationAddress: 'Rua Escopo',
+        empresaId: 99,
+        detalhesEntrega: [
+          {
+            descricao: 'Caixa',
+            quantidade: 1,
+          },
+        ],
+      };
+      mockRepository.save.mockResolvedValueOnce({
+        id: 12,
+        destinationAddress: 'Rua Escopo',
+        companyId: 1,
+      });
+      mockRepository.findOne.mockResolvedValueOnce({
+        id: 12,
+        destinationAddress: 'Rua Escopo',
+        companyId: 1,
+      });
+
+      await service.create(dto as any, { companyId: 1, isGlobal: false });
+
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: 1 }),
+      );
+    });
+
+    it('deve rejeitar motorista vinculado a outra empresa ao criar entrega', async () => {
+      const dto = {
+        destinationAddress: 'Rua Empresa Errada',
+        motoristaId: 4,
+        empresaId: 1,
+        detalhesEntrega: [
+          {
+            descricao: 'Caixa',
+            quantidade: 1,
+          },
+        ],
+      };
+      mockDriverRepository.findOne.mockResolvedValue({
+        id: 4,
+        user: {
+          companyId: 2,
+        },
+      });
+
+      await expect(service.create(dto as any)).rejects.toThrow(
+        'Motorista selecionado pertence a outra empresa.',
+      );
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+
     it('deve rejeitar criacao sem detalhes da entrega', async () => {
       const dto = { destinationAddress: 'Rua A', motoristaId: 4 };
 
@@ -160,10 +227,32 @@ describe('DeliveriesService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('deve listar entregas apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      await service.findAll({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
+    });
+  });
+
   describe('findOne', () => {
     it('deve lancar NotFoundException se entrega nao existir', async () => {
       mockRepository.findOne.mockResolvedValue(null);
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('deve buscar entrega respeitando empresa escopada', async () => {
+      mockRepository.findOne.mockResolvedValue({ id: 99, companyId: 1 });
+
+      await service.findOne(99, { companyId: 1, isGlobal: false });
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 99, companyId: 1 } }),
+      );
     });
   });
 
@@ -183,6 +272,25 @@ describe('DeliveriesService', () => {
         status: StatusEntrega.EM_ROTA,
       });
       expect(result.status).toBe(StatusEntrega.EM_ROTA);
+    });
+
+    it('deve atualizar entrega sem permitir trocar empresa fora do escopo', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 2,
+        companyId: 1,
+        status: StatusEntrega.AGUARDANDO_MOTORISTA,
+      });
+
+      await service.update(
+        2,
+        { empresaId: 99, status: StatusEntrega.EM_ROTA } as any,
+        { companyId: 1, isGlobal: false },
+      );
+
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ companyId: 1 }),
+      );
     });
   });
 
@@ -213,6 +321,17 @@ describe('DeliveriesService', () => {
         cancelados: 1,
       });
       expect(mockRepository.count).toHaveBeenCalledTimes(5);
+    });
+
+    it('deve retornar estatisticas apenas da empresa escopada', async () => {
+      mockRepository.count.mockResolvedValue(0);
+
+      await service.getStats({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.count).toHaveBeenCalledWith({ where: { companyId: 1 } });
+      expect(mockRepository.count).toHaveBeenCalledWith({
+        where: { companyId: 1, status: StatusEntrega.ENTREGUE },
+      });
     });
   });
 
@@ -358,6 +477,78 @@ describe('DeliveriesService', () => {
       );
     });
 
+    it('deve incluir todo o dia quando startDate e endDate vierem sem horario', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 15,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Inclusiva',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T15:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+      ]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-16',
+        endDate: '2026-06-16',
+      });
+
+      expect(analytics.kpis.totalDeliveries).toBe(1);
+      expect(analytics.filters.startDate).toBe('2026-06-16T00:00:00.000Z');
+      expect(analytics.filters.endDate).toBe('2026-06-16T23:59:59.999Z');
+    });
+
+    it('deve preservar horario explicito nos filtros de periodo', async () => {
+      mockRepository.find.mockResolvedValue([
+        {
+          id: 16,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Dentro Da Janela',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T15:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+        {
+          id: 17,
+          companyId: 1,
+          driverId: 10,
+          destinationAddress: 'Rua Fora Da Janela',
+          status: StatusEntrega.EM_ROTA,
+          createdAt: new Date('2026-06-16T16:00:00.000Z'),
+          occurrences: [],
+          finalization: null,
+        },
+      ]);
+
+      const analytics = await service.getAnalytics({
+        startDate: '2026-06-16T14:00:00.000Z',
+        endDate: '2026-06-16T15:30:00.000Z',
+      });
+
+      expect(analytics.kpis.totalDeliveries).toBe(1);
+      expect(analytics.filters.startDate).toBe('2026-06-16T14:00:00.000Z');
+      expect(analytics.filters.endDate).toBe('2026-06-16T15:30:00.000Z');
+    });
+
+    it('deve calcular analytics apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      const analytics = await service.getAnalytics(
+        { companyId: '99' },
+        { companyId: 1, isGlobal: false },
+      );
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
+      expect(analytics.filters.companyId).toBe(1);
+    });
+
     it('deve retornar zeros e arrays estaveis quando nao houver dados', async () => {
       mockRepository.find.mockResolvedValue([]);
 
@@ -427,16 +618,27 @@ describe('DeliveriesService', () => {
       );
       expect(alerts.filter((alert) => alert.id === 'delivery-31-gps-divergente')).toHaveLength(1);
     });
+
+    it('deve gerar alertas apenas da empresa escopada', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      await service.getAlerts({ companyId: 1, isGlobal: false });
+
+      expect(mockRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 1 } }),
+      );
+    });
   });
 
   describe('findCurrentByUser', () => {
     it('deve resolver o perfil do motorista e retornar apenas entregas ativas dele', async () => {
       const activeDeliveries = [
-        { id: 7, driverId: 14, status: StatusEntrega.AGUARDANDO_MOTORISTA },
-        { id: 8, driverId: 14, status: StatusEntrega.EM_ROTA },
+        { id: 7, companyId: 2, driverId: 14, status: StatusEntrega.AGUARDANDO_MOTORISTA },
+        { id: 8, companyId: 2, driverId: 14, status: StatusEntrega.EM_ROTA },
       ];
       mockUsersService.resolveDriverProfileId.mockResolvedValue(14);
       mockRepository.find.mockResolvedValue(activeDeliveries);
+      mockRepository.count.mockResolvedValueOnce(3).mockResolvedValueOnce(4);
 
       const result = await service.findCurrentByUser(77);
 
@@ -452,10 +654,16 @@ describe('DeliveriesService', () => {
             status: StatusEntrega.EM_ROTA,
           },
         ],
-        relations: ['company', 'occurrences', 'finalization', 'details'],
-        order: { id: 'DESC' },
+        relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization', 'details'],
+        order: { id: 'ASC' },
       });
-      expect(result).toEqual(activeDeliveries);
+      expect(mockRepository.count).toHaveBeenCalledWith({
+        where: { companyId: 2, id: expect.any(Object) },
+      });
+      expect(result).toEqual([
+        { ...activeDeliveries[0], companySequence: 3 },
+        { ...activeDeliveries[1], companySequence: 4 },
+      ]);
     });
 
     it('deve lancar NotFoundException quando o usuario nao possui perfil de motorista', async () => {
@@ -471,6 +679,7 @@ describe('DeliveriesService', () => {
     it('deve retornar historico e metricas do motorista autenticado', async () => {
       const completedDeliveries = [
         { id: 3, driverId: 14, status: StatusEntrega.ENTREGUE },
+        { id: 5, driverId: 14, status: StatusEntrega.COM_OCORRENCIA },
         { id: 4, driverId: 14, status: StatusEntrega.CANCELADO },
       ];
       mockUsersService.resolveDriverProfileId.mockResolvedValue(14);
@@ -495,10 +704,14 @@ describe('DeliveriesService', () => {
           },
           {
             driverId: 14,
+            status: StatusEntrega.COM_OCORRENCIA,
+          },
+          {
+            driverId: 14,
             status: StatusEntrega.CANCELADO,
           },
         ],
-        relations: ['company', 'occurrences', 'finalization', 'details'],
+        relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization', 'details'],
         order: { id: 'DESC' },
       });
       expect(result).toEqual({

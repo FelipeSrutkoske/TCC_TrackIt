@@ -16,37 +16,67 @@ import { StartDeliveryDto } from './dto/start-delivery.dto';
 import { DeliveryAnalyticsQueryDto } from './dto/delivery-analytics-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../auth/mobile-driver.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { TipoUsuario } from '../users/entities/user.entity';
+import { resolveCompanyScope } from '../common/company-scope';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('deliveries')
 export class DeliveriesController {
   constructor(private readonly deliveriesService: DeliveriesService) {}
 
   @Post()
-  create(@Body() body: CreateDeliveryDto) {
-    return this.deliveriesService.create(body);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  create(
+    @Body() body: CreateDeliveryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.deliveriesService.create(
+      body,
+      resolveCompanyScope(user, body.empresaId ?? body.companyId),
+    );
   }
 
   @Get()
-  findAll() {
-    return this.deliveriesService.findAll();
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.findAll(resolveCompanyScope(user, companyId));
   }
 
   @Get('stats')
-  getStats() {
-    return this.deliveriesService.getStats();
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  getStats(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.getStats(resolveCompanyScope(user, companyId));
   }
 
   @Get('analytics')
-  getAnalytics(@Query() query: DeliveryAnalyticsQueryDto) {
-    return this.deliveriesService.getAnalytics(query);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  getAnalytics(
+    @Query() query: DeliveryAnalyticsQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.deliveriesService.getAnalytics(
+      query,
+      resolveCompanyScope(user, query.companyId),
+    );
   }
 
   @Get('alerts')
-  getAlerts() {
-    return this.deliveriesService.getAlerts();
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  getAlerts(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.getAlerts(resolveCompanyScope(user, companyId));
   }
 
   @Get('me')
@@ -62,8 +92,16 @@ export class DeliveriesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.deliveriesService.findOne(+id);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.findOne(
+      +id,
+      resolveCompanyScope(user, companyId),
+    );
   }
 
   @Patch(':id/start')
@@ -77,13 +115,27 @@ export class DeliveriesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: UpdateDeliveryDto) {
-    // A lógica de motoristaId foi movida para o service para termos controllers mais limpos.
-    return this.deliveriesService.update(+id, data);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateDeliveryDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.update(
+      +id,
+      data,
+      resolveCompanyScope(user, companyId ?? data.empresaId ?? data.companyId),
+    );
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.deliveriesService.remove(+id);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.deliveriesService.remove(+id, resolveCompanyScope(user, companyId));
   }
 }

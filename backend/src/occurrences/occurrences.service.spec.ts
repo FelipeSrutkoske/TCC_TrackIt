@@ -236,4 +236,37 @@ describe('OccurrencesService', () => {
       byType: [{ type: 'GPS_INCOMPATIVEL', label: 'GPS incompativel', value: 1 }],
     });
   });
+
+  it('deve restringir ocorrencias ao escopo da empresa do usuario dashboard', async () => {
+    mockRepository.find.mockResolvedValue([
+      {
+        id: 1,
+        deliveryId: 9,
+        tipoOcorrencia: TipoOcorrencia.GPS_INCOMPATIVEL,
+        dataHora: new Date('2026-06-02T10:00:00.000Z'),
+        delivery: {
+          id: 9,
+          companyId: 2,
+          driverId: 14,
+          status: StatusEntrega.COM_OCORRENCIA,
+        },
+      },
+      {
+        id: 2,
+        deliveryId: 10,
+        tipoOcorrencia: TipoOcorrencia.OUTROS,
+        dataHora: new Date('2026-06-03T10:00:00.000Z'),
+        delivery: { id: 10, companyId: 3, driverId: 15, status: StatusEntrega.COM_OCORRENCIA },
+      },
+    ]);
+
+    const result = await (service as any).findAllWithSummary(
+      {},
+      { companyId: 2, isGlobal: false },
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].deliveryId).toBe(9);
+    expect(result.summary.total).toBe(1);
+  });
 });

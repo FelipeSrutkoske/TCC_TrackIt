@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FinalizationsService } from './finalizations.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Finalization } from './entities/finalization.entity';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
 import { DataSource } from 'typeorm';
@@ -232,6 +232,29 @@ describe('FinalizationsService', () => {
         longitude: -46.6,
       } as any),
     ).rejects.toThrow(ConflictException);
+
+    expect(mockRepository.save).not.toHaveBeenCalled();
+    expect(mockDeliveriesService.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it('deve rejeitar CPF do recebedor com digito verificador invalido', async () => {
+    mockDeliveriesService.findOwnedByUser.mockResolvedValue({
+      id: 1,
+      driverId: 14,
+      status: StatusEntrega.EM_ROTA,
+    });
+
+    await expect(
+      service.createForUser(77, {
+        deliveryId: 1,
+        receiverName: 'João',
+        receiverDocument: '111.111.111-11',
+        receiverRelation: 'Irmao',
+        signature: 'assinatura-base64',
+        latitude: -23.5,
+        longitude: -46.6,
+      } as any),
+    ).rejects.toThrow(BadRequestException);
 
     expect(mockRepository.save).not.toHaveBeenCalled();
     expect(mockDeliveriesService.updateStatus).not.toHaveBeenCalled();

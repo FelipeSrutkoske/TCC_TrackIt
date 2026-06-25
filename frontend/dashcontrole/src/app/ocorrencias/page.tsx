@@ -167,7 +167,7 @@ export default function OccurrencesPage() {
           <section className="rounded-2xl border border-[#c8cec8] bg-[linear-gradient(135deg,#fff7ed_0%,#f2f5f2_100%)] p-6 shadow-sm sm:p-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#9a5b13]">Tratativa operacional</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#9a5b13]">Central de ocorrencias</p>
                 <h1 className="mt-2 text-2xl font-black text-[#1f2320] sm:text-3xl">Ocorrencias registradas pelos motoristas</h1>
                 <p className="mt-2 text-sm text-[#5f695d]">Filtre causas, fotos, GPS e navegue direto para a entrega.</p>
               </div>
@@ -192,9 +192,9 @@ export default function OccurrencesPage() {
           {error ? <section className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">{error}</section> : null}
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard label="Total" value={loading ? "..." : summary?.total ?? 0} detail="Ocorrencias filtradas" />
-            <SummaryCard label="Tipo mais comum" value={loading ? "..." : summary?.mostCommonType ? TYPE_OPTIONS.find((item) => item.value === summary.mostCommonType)?.label ?? summary.mostCommonType : "-"} detail="Principal causa operacional" />
-            <SummaryCard label="Com foto" value={loading ? "..." : summary?.withPhoto ?? 0} detail="Evidencia visual anexada" />
+            <SummaryCard label="Total" value={loading ? "..." : summary?.total ?? 0} detail="Ocorrencias relatadas" />
+            <SummaryCard label="Tipo mais comum" value={loading ? "..." : summary?.mostCommonType ? TYPE_OPTIONS.find((item) => item.value === summary.mostCommonType)?.label ?? summary.mostCommonType : "-"} detail="Principal causa de ocorrencias" />
+            <SummaryCard label="Com foto" value={loading ? "..." : summary?.withPhoto ?? 0} detail="Evidencias anexadas" />
             <SummaryCard label="Com GPS" value={loading ? "..." : summary?.withGps ?? 0} detail="Coordenadas registradas" />
           </section>
 

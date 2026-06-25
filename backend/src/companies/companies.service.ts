@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -6,6 +6,9 @@ import {
   CompanySubscriptionStatus,
 } from '../deliveries/entities/company.entity';
 import { Delivery, StatusEntrega } from '../deliveries/entities/delivery.entity';
+import { CreateCompanyDto } from './dto/create-company.dto';
+import type { CompanyScope } from '../common/company-scope';
+import { isValidCnpj, onlyDigits } from '../common/validators/br-documents';
 
 interface CompanyAnalytics {
   totalDeliveries: number;
@@ -22,20 +25,75 @@ export interface CompanyWithAnalytics extends Company {
 
 @Injectable()
 export class CompaniesService {
+  private readonly logger = new Logger(CompaniesService.name);
+
   constructor(
     @InjectRepository(Company)
     private readonly companiesRepository: Repository<Company>,
   ) {}
 
-  findAll(): Promise<Company[]> {
+  async create(data: CreateCompanyDto): Promise<Company> {
+    const cnpj = onlyDigits(data.cnpj ?? '');
+
+    if (!isValidCnpj(cnpj)) {
+      throw new BadRequestException('Informe um CNPJ valido.');
+    }
+
+    const existingCompany = await this.companiesRepository.findOne({
+      where: { cnpj },
+    });
+
+    if (existingCompany) {
+      this.logger.warn(
+        `Tentativa de criar empresa com CNPJ duplicado: ${cnpj} (empresa existente id=${existingCompany.id})`,
+      );
+      throw new ConflictException('Já existe uma empresa cadastrada com este CNPJ.');
+    }
+
+    const company = this.companiesRepository.create({
+      corporateName: data.corporateName.trim(),
+      tradeName: data.tradeName?.trim() || data.corporateName.trim(),
+      cnpj,
+      situacaoCnpj: data.situacaoCnpj?.trim() || undefined,
+      cnaePrincipal: data.cnaePrincipal?.trim() || undefined,
+      porte: data.porte?.trim() || undefined,
+      contactEmail: data.contactEmail ?? undefined,
+      phone: onlyDigits(data.phone ?? '') || undefined,
+      cep: onlyDigits(data.cep ?? '') || undefined,
+      logradouro: data.logradouro?.trim() || undefined,
+      numero: data.numero?.trim() || undefined,
+      complemento: data.complemento?.trim() || undefined,
+      bairro: data.bairro?.trim() || undefined,
+      municipio: data.municipio?.trim() || undefined,
+      uf: data.uf?.trim().toUpperCase() || undefined,
+      subscriptionStatus:
+        data.subscriptionStatus ?? CompanySubscriptionStatus.ATIVO,
+      registeredAt: new Date(),
+    });
+
+    const savedCompany = await this.companiesRepository.save(company);
+
+    this.logger.log(
+      `Empresa criada id=${savedCompany.id} cnpj=${savedCompany.cnpj} nome=${savedCompany.corporateName}`,
+    );
+
+    return savedCompany;
+  }
+
+  findAll(scope?: CompanyScope): Promise<Company[]> {
     return this.companiesRepository.find({
-      where: { subscriptionStatus: CompanySubscriptionStatus.ATIVO },
+      where: {
+        ...(this.getScopedCompanyWhere(scope) ?? {}),
+        subscriptionStatus: CompanySubscriptionStatus.ATIVO,
+      },
       order: { corporateName: 'ASC' },
     });
   }
 
-  async findAllWithAnalytics(): Promise<CompanyWithAnalytics[]> {
+  async findAllWithAnalytics(scope?: CompanyScope): Promise<CompanyWithAnalytics[]> {
+    const scopedWhere = this.getScopedCompanyWhere(scope);
     const companies = await this.companiesRepository.find({
+      ...(scopedWhere ? { where: scopedWhere } : {}),
       relations: [
         'deliveries',
         'deliveries.occurrences',
@@ -49,9 +107,10 @@ export class CompaniesService {
     return companies.map((company) => this.withAnalytics(company));
   }
 
-  async findAnalytics(id: number): Promise<CompanyWithAnalytics> {
+  async findAnalytics(id: number, scope?: CompanyScope): Promise<CompanyWithAnalytics> {
+    const scopedWhere = this.getScopedCompanyWhere(scope);
     const company = await this.companiesRepository.findOne({
-      where: { id },
+      where: scopedWhere ?? { id },
       relations: [
         'deliveries',
         'deliveries.occurrences',
@@ -68,8 +127,16 @@ export class CompaniesService {
     return this.withAnalytics(company);
   }
 
+  private getScopedCompanyWhere(scope?: CompanyScope): { id: number } | null {
+    if (!scope || scope.isGlobal || !scope.companyId) {
+      return null;
+    }
+
+    return { id: scope.companyId };
+  }
+
   private withAnalytics(company: Company): CompanyWithAnalytics {
-    const deliveries = company.deliveries ?? [];
+    const deliveries = this.withDeliverySequences(company.deliveries ?? []);
     const completed = deliveries.filter(
       (delivery) => delivery.status === StatusEntrega.ENTREGUE,
     );
@@ -83,6 +150,7 @@ export class CompaniesService {
 
     return {
       ...company,
+      deliveries,
       analytics: {
         totalDeliveries: deliveries.length,
         completionRate: this.percentage(completed.length, deliveries.length),
@@ -97,6 +165,12 @@ export class CompaniesService {
         lastDeliveryAt: lastDeliveryAt?.toISOString() ?? null,
       },
     };
+  }
+
+  private withDeliverySequences(deliveries: Delivery[]): Delivery[] {
+    return [...deliveries]
+      .sort((a, b) => a.id - b.id)
+      .map((delivery, index) => Object.assign(delivery, { companySequence: index + 1 }));
   }
 
   private isDelayed(delivery: Delivery): boolean {

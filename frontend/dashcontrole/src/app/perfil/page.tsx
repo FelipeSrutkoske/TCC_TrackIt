@@ -5,9 +5,11 @@ import { Header } from "../components/Header";
 import { authService } from "@/services/auth.service";
 import { usersService } from "@/services/users.service";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function PerfilPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -68,10 +70,10 @@ export default function PerfilPage() {
       await usersService.update(user.id, dataToUpdate);
       setIsEditing(false);
       setUser(prev => ({ ...prev, senha: "" }));
-      alert("Dados atualizados com sucesso!");
+      addToast("Dados atualizados com sucesso!", "success");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao salvar perfil.";
-      alert(errorMessage);
+      addToast(errorMessage, "error");
     }
   };
 

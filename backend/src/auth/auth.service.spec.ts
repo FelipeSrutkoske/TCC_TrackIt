@@ -18,6 +18,7 @@ describe('AuthService', () => {
 
   const mockUsersService = {
     findByEmail: jest.fn(),
+    update: jest.fn(),
   };
 
   const mockJwtService = {
@@ -46,11 +47,12 @@ describe('AuthService', () => {
     it('deve retornar token JWT e dados do usuario com credenciais validas', async () => {
       const mockUser = {
         id: 1,
-        email: 'admin@test.com',
+        email: 'dashboard@test.com',
         senha: '$2b$10$mockhash',
-        nome: 'Admin Test',
-        tipoUsuario: TipoUsuario.ADMIN,
+        nome: 'Dashboard Test',
+        tipoUsuario: TipoUsuario.DASHBOARD,
         ativo: true,
+        companyId: 1,
       };
 
       jest
@@ -59,23 +61,25 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       jest.spyOn(jwtService, 'sign').mockReturnValue('mock-jwt-token');
 
-      const result = await service.login('admin@test.com', '123');
+      const result = await service.login('dashboard@test.com', '123');
 
       expect(result).toEqual({
         access_token: 'mock-jwt-token',
         user: {
           id: 1,
-          nome: 'Admin Test',
-          email: 'admin@test.com',
-          tipoUsuario: TipoUsuario.ADMIN,
+          nome: 'Dashboard Test',
+          email: 'dashboard@test.com',
+          tipoUsuario: TipoUsuario.DASHBOARD,
+          companyId: 1,
         },
       });
-      expect(usersService.findByEmail).toHaveBeenCalledWith('admin@test.com');
+      expect(usersService.findByEmail).toHaveBeenCalledWith('dashboard@test.com');
       expect(bcrypt.compare).toHaveBeenCalledWith('123', '$2b$10$mockhash');
       expect(jwtService.sign).toHaveBeenCalledWith({
-        email: 'admin@test.com',
+        email: 'dashboard@test.com',
         sub: 1,
-        tipoUsuario: TipoUsuario.ADMIN,
+        tipoUsuario: TipoUsuario.DASHBOARD,
+        companyId: 1,
       });
     });
 
@@ -103,6 +107,40 @@ describe('AuthService', () => {
       );
     });
 
+    it('deve rejeitar login de usuario inativo', async () => {
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue({
+        id: 1,
+        nome: 'Usuario Inativo',
+        email: 'inactive@test.com',
+        senha: '$2b$10$mockhash',
+        tipoUsuario: TipoUsuario.DASHBOARD,
+        ativo: false,
+      } as any);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(service.login('inactive@test.com', '123')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(jwtService.sign).not.toHaveBeenCalled();
+    });
+
+    it('deve rejeitar senha legada em texto plano', async () => {
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue({
+        id: 1,
+        nome: 'Legacy User',
+        email: 'legacy@test.com',
+        senha: '123',
+        tipoUsuario: TipoUsuario.DASHBOARD,
+        ativo: true,
+      } as any);
+
+      await expect(service.login('legacy@test.com', '123')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(usersService.update).not.toHaveBeenCalled();
+      expect(jwtService.sign).not.toHaveBeenCalled();
+    });
+
     it('deve incluir driverProfileId na resposta quando o usuario motorista tiver perfil vinculado', async () => {
       const mockUser = {
         id: 7,
@@ -111,6 +149,7 @@ describe('AuthService', () => {
         nome: 'Motorista Test',
         tipoUsuario: TipoUsuario.MOTORISTA,
         ativo: true,
+        companyId: 1,
         driverProfile: {
           id: 99,
         },
@@ -131,6 +170,7 @@ describe('AuthService', () => {
           nome: 'Motorista Test',
           email: 'motorista@test.com',
           tipoUsuario: TipoUsuario.MOTORISTA,
+          companyId: 1,
           driverProfileId: 99,
         },
       });

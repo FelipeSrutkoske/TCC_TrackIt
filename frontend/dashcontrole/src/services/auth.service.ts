@@ -12,7 +12,12 @@ export interface LoginResponse {
     nome: string;
     email: string;
     tipoUsuario: 'ADMIN' | 'DASHBOARD' | 'MOTORISTA';
+    companyId: number | null;
   };
+}
+
+function isDashboardUser(user: LoginResponse['user'] | null): boolean {
+  return user?.tipoUsuario === 'ADMIN' || user?.tipoUsuario === 'DASHBOARD';
 }
 
 export const authService = {
@@ -21,6 +26,9 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    if (!isDashboardUser(data.user)) {
+      throw new Error('Perfil de motorista deve acessar pelo aplicativo mobile.');
+    }
     if (typeof window !== 'undefined') {
       localStorage.setItem('trackit_token', data.access_token);
       localStorage.setItem('trackit_user', JSON.stringify(data.user));
@@ -46,6 +54,6 @@ export const authService = {
 
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('trackit_token');
+    return !!localStorage.getItem('trackit_token') && isDashboardUser(this.getUser());
   },
 };

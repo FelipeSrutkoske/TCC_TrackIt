@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import nodemailer from 'nodemailer';
 import { Repository } from 'typeorm';
@@ -39,6 +39,12 @@ export class DeliveryProofEmailsService {
     emailDestinoManual?: string,
   ): Promise<DeliveryProofEmail> {
     const delivery = await this.deliveriesService.findOne(deliveryId);
+
+    if (!delivery.finalization) {
+      this.logger.warn(`Tentativa de enviar comprovante antes da finalizacao deliveryId=${deliveryId}`);
+      throw new BadRequestException('O comprovante so pode ser enviado apos a finalizacao da entrega.');
+    }
+
     const emailDestino = this.resolveRecipient(delivery, emailDestinoManual);
 
     if (!emailDestino) {
@@ -110,7 +116,7 @@ export class DeliveryProofEmailsService {
     await transporter.sendMail({
       from: process.env.SMTP_FROM ?? 'TrackIt <no-reply@trackit.local>',
       to: emailDestino,
-      subject: `Comprovante TrackIt - Entrega: #${delivery.id}`,
+      subject: `Comprovante de entrega TrackIt`,
       html: content.html,
       attachments: content.attachments,
     });
@@ -164,8 +170,8 @@ export class DeliveryProofEmailsService {
                   <tr>
                     <td style="background:#1f2320;padding:26px 30px;color:#ffffff;">
                       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a8bc94;font-weight:700;">TrackIt</div>
-                      <h1 style="margin:10px 0 4px;font-size:28px;line-height:1.2;">Comprovante de entrega #${delivery.id}</h1>
-                      <p style="margin:0;color:#cbd5c7;font-size:14px;">Evidencias registradas para auditoria operacional last mile.</p>
+                      <h1 style="margin:10px 0 4px;font-size:28px;line-height:1.2;">Comprovante de entrega</h1>
+                      <p style="margin:0;color:#cbd5c7;font-size:14px;">Olá, aqui está o comprovante da sua entrega.</p>
                     </td>
                   </tr>
                   <tr>
@@ -193,7 +199,7 @@ export class DeliveryProofEmailsService {
                       ${this.infoTable([
                         ['Nome', finalization?.receiverName || '-'],
                         ['Documento', finalization?.receiverDocument || '-'],
-                        ['Parentesco/cargo', finalization?.receiverRelation || '-'],
+                        ['Parentesco', finalization?.receiverRelation || '-'],
                         ['Inicio', this.formatDate(delivery.dataHoraInicio)],
                         ['Finalizacao', this.formatDate(finalization?.finalizedAt)],
                       ])}
@@ -215,16 +221,11 @@ export class DeliveryProofEmailsService {
                       <div style="border:1px solid #e5e7eb;border-radius:14px;background:#ffffff;padding:16px;text-align:center;">
                         ${signatureHtml}
                       </div>
-
-                      <h2 style="font-size:18px;margin:24px 0 12px;color:#111827;">Ocorrencias</h2>
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:14px;padding:0 16px;background:#ffffff;">
-                        ${occurrenceCards}
-                      </table>
                     </td>
                   </tr>
                   <tr>
                     <td style="padding:18px 30px;background:#f8faf8;border-top:1px solid #e5e7eb;color:#64748b;font-size:12px;line-height:1.5;">
-                      Este comprovante foi gerado automaticamente pelo TrackIt para fins de rastreabilidade e auditoria. Valide os dados no painel operacional quando necessario.
+                      Este é um email automático gerado pelo TrackIt. Por favor, não responda este email.
                     </td>
                   </tr>
                 </table>

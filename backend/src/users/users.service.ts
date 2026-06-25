@@ -1,24 +1,106 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { TipoUsuario, User } from './entities/user.entity';
+import { Driver } from './entities/driver.entity';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { resolveCompanyScope } from '../common/company-scope';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Driver)
+    private readonly driversRepository: Repository<Driver>,
   ) {}
 
-  async create(data: Partial<User> & { senha: string }): Promise<User> {
+  async create(data: CreateUserDto): Promise<User> {
+    const { driverProfile, ...userData } = data;
+    const normalizedUserData = this.normalizeUserData(userData);
+    const normalizedDriverProfile = this.normalizeDriverProfile(driverProfile);
+
+    this.validateUserRules({ ...normalizedUserData, driverProfile: normalizedDriverProfile }, 'create');
+
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: normalizedUserData.email },
+    });
+    if (existingUser) {
+      throw new ConflictException('Já existe um usuário cadastrado com este e-mail.');
+    }
+
     const hash = await bcrypt.hash(data.senha, 10);
-    const user = this.usersRepository.create({ ...data, senha: hash });
-    return this.usersRepository.save(user);
+    const user = this.usersRepository.create({ ...normalizedUserData, senha: hash });
+    const savedUser = await this.usersRepository.save(user);
+
+    this.logger.log(
+      `Usuario criado id=${savedUser.id} email=${savedUser.email} tipo=${savedUser.tipoUsuario}${savedUser.companyId ? ` companyId=${savedUser.companyId}` : ''}`,
+    );
+
+    if (normalizedUserData.tipoUsuario === TipoUsuario.MOTORISTA && normalizedDriverProfile) {
+      const savedDriver = await this.driversRepository.save(
+        this.driversRepository.create({
+          userId: savedUser.id,
+          cnh: normalizedDriverProfile.cnh,
+          placaVeiculo: normalizedDriverProfile.placaVeiculo ?? undefined,
+          tipoVeiculo: normalizedDriverProfile.tipoVeiculo ?? undefined,
+          disponivel: normalizedDriverProfile.disponivel ?? true,
+        }),
+      );
+
+      savedUser.driverProfile = savedDriver;
+    }
+
+    return this.withoutPassword(savedUser);
   }
 
-  findAll(): Promise<User[]> {
-    return this.usersRepository.find({ relations: ['driverProfile'] });
+  async createScoped(
+    data: CreateUserDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<User> {
+    if (
+      currentUser.tipoUsuario !== TipoUsuario.ADMIN &&
+      data.tipoUsuario !== TipoUsuario.MOTORISTA &&
+      data.tipoUsuario !== TipoUsuario.DASHBOARD
+    ) {
+      throw new ForbiddenException('Usuario sem permissao para criar este tipo de usuario');
+    }
+
+    const scope = resolveCompanyScope(currentUser, data.companyId);
+    const companyId = scope.isGlobal ? data.companyId ?? null : scope.companyId;
+    const scopedData =
+      companyId === null ? { ...data, companyId: undefined } : { ...data, companyId };
+
+    return this.create(scopedData);
+  }
+
+  async findAll(): Promise<User[]> {
+    const users = await this.usersRepository.find({
+      relations: ['driverProfile'],
+    });
+    return users.map((user) => this.withoutPassword(user));
+  }
+
+  async findAllScoped(currentUser: AuthenticatedUser): Promise<User[]> {
+    const scope = resolveCompanyScope(currentUser);
+    const users = await this.usersRepository.find({
+      where: scope.isGlobal ? {} : { companyId: scope.companyId ?? undefined },
+      relations: ['driverProfile', 'company'],
+    });
+
+    return users.map((user) => this.withoutPassword(user));
   }
 
   async findOne(id: number): Promise<User> {
@@ -27,7 +109,7 @@ export class UsersService {
       relations: ['driverProfile'],
     });
     if (!user) throw new NotFoundException(`Usuário #${id} não encontrado`);
-    return user;
+    return this.withoutPassword(user);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -48,20 +130,210 @@ export class UsersService {
     return (user?.driverProfile as { id?: number } | null)?.id ?? null;
   }
 
-  async update(
-    id: number,
-    data: Partial<User> & { senha?: string },
-  ): Promise<User> {
+  async update(id: number, data: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    if (data.senha) {
-      data.senha = await bcrypt.hash(data.senha, 10);
+    const { driverProfile, ...userData } = data;
+
+    if (user.tipoUsuario === TipoUsuario.ADMIN) {
+      throw new ForbiddenException('Acesso de administrador nao pode ser alterado.');
     }
-    Object.assign(user, data);
-    return this.usersRepository.save(user);
+
+    const effectiveUserData = this.normalizeUserData({ ...user, ...userData });
+
+    // No update, so valida CNH e placa quando o frontend envia driverProfile.
+    // Isso evita que dados legados no banco bloqueiem edicao de nome, e-mail ou status.
+    const effectiveDriverProfile = driverProfile
+      ? this.normalizeDriverProfile({
+          cnh: driverProfile.cnh || user.driverProfile?.cnh,
+          placaVeiculo: driverProfile.placaVeiculo || user.driverProfile?.placaVeiculo,
+        })
+      : null;
+
+    this.validateUserRules(
+      { ...effectiveUserData, driverProfile: effectiveDriverProfile },
+      'update',
+      {
+        validatePlate: Boolean(driverProfile),
+        validateCnh: Boolean(driverProfile),
+        existingDriverProfile: user.driverProfile as { cnh?: string | null; placaVeiculo?: string | null } | null,
+      },
+    );
+
+    if (userData.email && userData.email !== user.email) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { email: userData.email },
+      });
+
+      if (existingUser && existingUser.id !== id) {
+        throw new ConflictException('Já existe um usuário cadastrado com este e-mail.');
+      }
+    }
+
+    if ('senha' in userData && !userData.senha) {
+      delete userData.senha;
+    }
+
+    if (userData.senha) {
+      userData.senha = await bcrypt.hash(userData.senha, 10);
+    }
+    if (effectiveUserData.tipoUsuario === TipoUsuario.ADMIN) {
+      (userData as { companyId?: number | null }).companyId = null;
+    }
+    Object.assign(user, userData);
+    const savedUser = await this.usersRepository.save(user);
+
+    this.logger.log(
+      `Usuario atualizado id=${savedUser.id} email=${savedUser.email} tipo=${savedUser.tipoUsuario}${savedUser.companyId ? ` companyId=${savedUser.companyId}` : ''}`,
+    );
+
+    return this.withoutPassword(savedUser);
+  }
+
+  async updateScoped(
+    id: number,
+    data: UpdateUserDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<User> {
+    this.logger.log(
+      `Usuario id=${currentUser.id} tipo=${currentUser.tipoUsuario} iniciando atualizacao do usuario id=${id}`,
+    );
+
+    if (currentUser.tipoUsuario === TipoUsuario.MOTORISTA) {
+      this.logger.warn(`Motorista id=${currentUser.id} tentou alterar usuario id=${id}`);
+      throw new ForbiddenException('Motorista nao pode alterar usuarios.');
+    }
+
+    const targetUser = await this.findOne(id);
+
+    if (targetUser.tipoUsuario === TipoUsuario.ADMIN) {
+      this.logger.warn(`Tentativa de alterar usuario ADMIN bloqueada id=${id}`);
+      throw new ForbiddenException('Acesso de administrador nao pode ser alterado.');
+    }
+
+    if (
+      currentUser.tipoUsuario === TipoUsuario.DASHBOARD &&
+      targetUser.companyId !== currentUser.companyId
+    ) {
+      this.logger.warn(
+        `Usuario DASHBOARD id=${currentUser.id} tentou alterar usuario de outra empresa id=${id}`,
+      );
+      throw new ForbiddenException('Voce nao pode alterar usuarios de outra empresa.');
+    }
+
+    return this.update(id, data);
   }
 
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
     await this.usersRepository.remove(user);
+  }
+
+  private withoutPassword(user: User): User {
+    const { senha: _senha, ...safeUser } = user;
+    return safeUser as User;
+  }
+
+  private validateUserRules(
+    data: {
+      tipoUsuario?: TipoUsuario;
+      companyId?: number | null;
+      driverProfile?: { cnh?: string | null; placaVeiculo?: string | null } | null;
+    },
+    operation: 'create' | 'update',
+    options?: {
+      validatePlate?: boolean;
+      validateCnh?: boolean;
+      existingDriverProfile?: { cnh?: string | null; placaVeiculo?: string | null } | null;
+    },
+  ): void {
+    if (data.tipoUsuario === TipoUsuario.ADMIN) {
+      return;
+    }
+
+    const hasValidCompanyId =
+      typeof data.companyId === 'number' &&
+      Number.isInteger(data.companyId) &&
+      data.companyId >= 1;
+
+    if (!hasValidCompanyId) {
+      if (data.tipoUsuario === TipoUsuario.DASHBOARD) {
+        throw new BadRequestException('Informe a empresa para criar um usuário dashboard');
+      }
+
+      if (data.tipoUsuario === TipoUsuario.MOTORISTA) {
+        throw new BadRequestException('Informe a empresa para criar um motorista');
+      }
+    }
+
+    if (data.tipoUsuario === TipoUsuario.DASHBOARD && data.companyId == null) {
+      throw new BadRequestException('Informe a empresa para criar um usuário dashboard');
+    }
+
+    if (data.tipoUsuario === TipoUsuario.MOTORISTA && data.companyId == null) {
+      throw new BadRequestException('Informe a empresa para criar um motorista');
+    }
+
+    const effectiveCnh = data.driverProfile?.cnh || options?.existingDriverProfile?.cnh;
+
+    if (
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      !effectiveCnh
+    ) {
+      throw new BadRequestException('Informe a CNH para criar um motorista');
+    }
+
+    const shouldValidateCnh = options?.validateCnh !== false;
+    if (
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      data.driverProfile?.cnh &&
+      shouldValidateCnh &&
+      data.driverProfile.cnh.length !== 11
+    ) {
+      throw new BadRequestException('Informe um numero valido de registro da CNH.');
+    }
+
+    const placaVeiculo = data.driverProfile?.placaVeiculo;
+    const shouldValidatePlate = options?.validatePlate !== false;
+    if (
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      placaVeiculo &&
+      shouldValidatePlate &&
+      !this.isValidVehiclePlate(placaVeiculo)
+    ) {
+      throw new BadRequestException('Informe uma placa válida no formato ABC1234 ou ABC1D23.');
+    }
+  }
+
+  private normalizeUserData<T extends { tipoUsuario?: TipoUsuario; companyId?: number | null }>(
+    data: T,
+  ): T {
+    if (data.tipoUsuario === TipoUsuario.ADMIN) {
+      return { ...data, companyId: null };
+    }
+
+    return data;
+  }
+
+  private normalizeDriverProfile<T extends {
+    cnh?: string | null;
+    placaVeiculo?: string | null;
+    tipoVeiculo?: string | null;
+    disponivel?: boolean;
+  } | undefined>(driverProfile: T) {
+    if (!driverProfile) return driverProfile;
+
+    const placaVeiculo = driverProfile.placaVeiculo
+      ? driverProfile.placaVeiculo.replace(/[\s-]/g, '').toUpperCase()
+      : null;
+
+    return {
+      ...driverProfile,
+      cnh: driverProfile.cnh ? driverProfile.cnh.replace(/\D/g, '') : driverProfile.cnh,
+      placaVeiculo: placaVeiculo || null,
+    };
+  }
+
+  private isValidVehiclePlate(value: string): boolean {
+    return /^[A-Z]{3}(\d{4}|\d[A-Z]\d{2})$/.test(value);
   }
 }

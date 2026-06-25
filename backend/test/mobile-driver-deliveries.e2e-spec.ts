@@ -11,10 +11,16 @@ import { App } from 'supertest/types';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DeliveriesController } from '../src/deliveries/deliveries.controller';
 import { DeliveriesService } from '../src/deliveries/deliveries.service';
-import { Delivery, StatusEntrega } from '../src/deliveries/entities/delivery.entity';
+import {
+  Delivery,
+  StatusEntrega,
+} from '../src/deliveries/entities/delivery.entity';
+import { Company } from '../src/deliveries/entities/company.entity';
+import { Driver } from '../src/users/entities/driver.entity';
 import { FinalizationsController } from '../src/finalizations/finalizations.controller';
 import { FinalizationsService } from '../src/finalizations/finalizations.service';
 import { Finalization } from '../src/finalizations/entities/finalization.entity';
+import { DeliveryProofEmailsService } from '../src/proof-emails/proof-emails.service';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { MobileDriverGuard } from '../src/auth/mobile-driver.guard';
 import { UsersService } from '../src/users/users.service';
@@ -81,6 +87,14 @@ const mockRepository = {
   }),
 };
 
+const mockCompanyRepository = {
+  findOne: jest.fn(),
+};
+
+const mockDriverRepository = {
+  findOne: jest.fn(),
+};
+
 const finalizationsFixture: any[] = [];
 
 const mockFinalizationsRepository = {
@@ -102,11 +116,17 @@ const mockFinalizationsRepository = {
     return finalizationsFixture.find((item) => item.id === id) ?? null;
   }),
   remove: jest.fn(async (finalization: any) => {
-    const index = finalizationsFixture.findIndex((item) => item.id === finalization.id);
+    const index = finalizationsFixture.findIndex(
+      (item) => item.id === finalization.id,
+    );
     if (index >= 0) {
       finalizationsFixture.splice(index, 1);
     }
   }),
+};
+
+const mockProofEmailsService = {
+  sendDeliveryProof: jest.fn(),
 };
 
 const mockDataSource = {
@@ -139,8 +159,10 @@ function filterDeliveries(options: { where?: any } | undefined) {
   return deliveriesFixture.filter((delivery) =>
     conditions.some(
       (condition) =>
-        (condition.driverId === undefined || delivery.driverId === condition.driverId) &&
-        (condition.status === undefined || delivery.status === condition.status),
+        (condition.driverId === undefined ||
+          delivery.driverId === condition.driverId) &&
+        (condition.status === undefined ||
+          delivery.status === condition.status),
     ),
   );
 }
@@ -198,7 +220,11 @@ describe('Mobile driver deliveries (e2e)', () => {
   afterEach(() => {
     jest.clearAllMocks();
     finalizationsFixture.splice(0, finalizationsFixture.length);
-    deliveriesFixture.splice(0, deliveriesFixture.length, ...buildDeliveriesFixture());
+    deliveriesFixture.splice(
+      0,
+      deliveriesFixture.length,
+      ...buildDeliveriesFixture(),
+    );
   });
 
   it('retorna 403 para usuario autenticado sem papel de motorista', async () => {
@@ -273,12 +299,18 @@ describe('Mobile driver deliveries (e2e)', () => {
       .patch('/deliveries/1/start')
       .set('x-test-user-role', TipoUsuario.MOTORISTA)
       .set('x-test-user-id', '77')
+      .send({ latitudeInicio: -23.5, longitudeInicio: -46.6 })
       .expect(200)
-      .expect({
-        id: 1,
-        driverId: 701,
-        destinationAddress: 'Rua A',
-        status: StatusEntrega.EM_ROTA,
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          id: 1,
+          driverId: 701,
+          destinationAddress: 'Rua A',
+          status: StatusEntrega.EM_ROTA,
+          latitudeInicio: -23.5,
+          longitudeInicio: -46.6,
+        });
+        expect(body.dataHoraInicio).toEqual(expect.any(String));
       });
   });
 
@@ -287,6 +319,7 @@ describe('Mobile driver deliveries (e2e)', () => {
       .patch('/deliveries/5/start')
       .set('x-test-user-role', TipoUsuario.MOTORISTA)
       .set('x-test-user-id', '77')
+      .send({ latitudeInicio: -23.5, longitudeInicio: -46.6 })
       .expect(404);
   });
 
@@ -303,19 +336,24 @@ describe('Mobile driver deliveries (e2e)', () => {
         longitude: -46.6,
       })
       .expect(201)
-      .expect({
-        id: 1,
-        deliveryId: 2,
-        receiverName: 'Maria',
-        signatureUrl: 'assinatura-mobile',
-        latitude: -23.5,
-        longitude: -46.6,
-        finalizedAt: '2026-01-01T10:00:00.000Z',
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          id: 1,
+          deliveryId: 2,
+          receiverName: 'Maria',
+          receiverDocument: '',
+          receiverRelation: '',
+          photoUrl: '',
+          signatureUrl: 'assinatura-mobile',
+          latitude: -23.5,
+          longitude: -46.6,
+          finalizedAt: '2026-01-01T10:00:00.000Z',
+        });
       });
 
-    expect(deliveriesFixture.find((delivery) => delivery.id === 2)?.status).toBe(
-      StatusEntrega.ENTREGUE,
-    );
+    expect(
+      deliveriesFixture.find((delivery) => delivery.id === 2)?.status,
+    ).toBe(StatusEntrega.ENTREGUE);
   });
 
   it('retorna 404 ao tentar finalizar entrega de outro motorista', async () => {
@@ -441,6 +479,14 @@ class TestJwtAuthGuard implements CanActivate {
       useValue: mockRepository,
     },
     {
+      provide: getRepositoryToken(Company),
+      useValue: mockCompanyRepository,
+    },
+    {
+      provide: getRepositoryToken(Driver),
+      useValue: mockDriverRepository,
+    },
+    {
       provide: getRepositoryToken(Finalization),
       useValue: mockFinalizationsRepository,
     },
@@ -451,6 +497,10 @@ class TestJwtAuthGuard implements CanActivate {
     {
       provide: DataSource,
       useValue: mockDataSource,
+    },
+    {
+      provide: DeliveryProofEmailsService,
+      useValue: mockProofEmailsService,
     },
   ],
 })

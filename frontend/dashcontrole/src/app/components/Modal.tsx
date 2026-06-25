@@ -155,7 +155,7 @@ export function Modal({
         tabIndex={-1}
         className={`
           relative w-full ${sizeStyles[size]}
-          bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl
+          bg-[#fbfdf8] border border-[#c8d7c0] rounded-2xl shadow-2xl
           flex flex-col max-h-[90vh]
           animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-200
           focus:outline-none
@@ -163,15 +163,15 @@ export function Modal({
       >
         {/* ── Cabeçalho ──────────────────────────────────── */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-5 border-b border-zinc-800 flex-shrink-0">
+          <div className="flex items-start justify-between p-5 border-b border-[#c8d7c0] flex-shrink-0">
             <div>
               {title && (
-                <h2 id="modal-title" className="text-white font-semibold text-lg leading-tight">
+                <h2 id="modal-title" className="text-[#18231c] font-semibold text-lg leading-tight">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-zinc-400">{description}</p>
+                <p className="mt-1 text-sm text-[#5d6f63]">{description}</p>
               )}
             </div>
 
@@ -179,7 +179,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="ml-4 flex-shrink-0 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="ml-4 flex-shrink-0 p-1 rounded-lg text-[#5d6f63] hover:text-[#18231c] hover:bg-[#e0eadd] transition-colors"
                 aria-label="Fechar modal"
               >
                 <CloseIcon />
@@ -195,7 +195,7 @@ export function Modal({
 
         {/* ── Rodapé com botões de ação ──────────────────── */}
         {footer && (
-          <div className="flex items-center justify-end gap-2 p-4 border-t border-zinc-800 flex-shrink-0">
+          <div className="flex items-center justify-end gap-2 p-4 border-t border-[#c8d7c0] flex-shrink-0">
             {footer}
           </div>
         )}

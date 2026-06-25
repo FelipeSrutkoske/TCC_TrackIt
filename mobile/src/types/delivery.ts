@@ -20,17 +20,27 @@ export type DeliveryOccurrence = {
   id: number;
   tipoOcorrencia?: string | null;
   descricao?: string | null;
+  dataHora?: string | null;
   createdAt?: string | null;
 };
 
 export type Delivery = {
   id: number;
+  companySequence?: number | null;
   driverId: number;
   companyId?: number | null;
   company?: {
     id: number;
     corporateName: string;
     tradeName?: string | null;
+  } | null;
+  driver?: {
+    id: number;
+    userId: number;
+    user?: {
+      id: number;
+      nome: string;
+    } | null;
   } | null;
   destinationAddress: string;
   latitudeDestino?: number | string | null;

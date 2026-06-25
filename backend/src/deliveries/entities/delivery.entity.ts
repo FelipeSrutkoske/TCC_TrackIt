@@ -26,6 +26,8 @@ export class Delivery {
   @PrimaryGeneratedColumn()
   id: number;
 
+  companySequence?: number;
+
   @Column({ name: 'motorista_id', nullable: true })
   driverId: number;
 

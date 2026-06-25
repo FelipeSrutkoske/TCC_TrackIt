@@ -42,6 +42,29 @@ describe('DeliveryDetailsScreen', () => {
     mockGetCurrentCoordinates.mockReset();
   });
 
+  it('does not request GPS automatically when rendering the route preview', () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryDetailsScreen
+          route={{
+            key: 'DeliveryDetails-1',
+            name: 'DeliveryDetails',
+            params: {
+              delivery: {
+                ...deliveryFixture,
+                latitudeDestino: '-24.053378',
+                longitudeDestino: '-52.376477',
+              },
+            },
+          }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Calcular rota' })).toBeOnTheScreen();
+  });
+
   it('starts the delivery with GPS without opening maps from the main button', async () => {
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5505, longitude: -46.6333 });
     mockStartDelivery.mockResolvedValueOnce({
@@ -55,8 +78,11 @@ describe('DeliveryDetailsScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Missao operacional')).toBeOnTheScreen();
-    expect(screen.getByText('Aguardando despacho')).toBeOnTheScreen();
+    expect(screen.getAllByText('Detalhes da entrega').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Missao operacional')).toBeNull();
+    expect(screen.getByText('Painel da entrega')).toBeOnTheScreen();
+    expect(screen.getByText('Endereço')).toBeOnTheScreen();
+    expect(screen.getByText('Aguardando inicio')).toBeOnTheScreen();
 
     fireEvent.press(screen.getByRole('button', { name: 'Iniciar entrega' }));
 
@@ -143,6 +169,11 @@ describe('DeliveryDetailsScreen', () => {
             params: {
               delivery: {
                 ...deliveryFixture,
+                driver: {
+                  id: 701,
+                  userId: 7,
+                  user: { id: 7, nome: 'Joao Motorista' },
+                },
                 details: [
                   {
                     id: 10,
@@ -162,8 +193,16 @@ describe('DeliveryDetailsScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Detalhes da carga')).toBeOnTheScreen();
+    expect(screen.getAllByText('Detalhes da entrega').length).toBeGreaterThan(0);
+    expect(screen.getByText('Ordem de servico')).toBeOnTheScreen();
+    expect(screen.getByText('Joao Motorista')).toBeOnTheScreen();
+    expect(screen.queryByText('#701')).toBeNull();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
     expect(screen.getByText('Documentos')).toBeOnTheScreen();
+    expect(screen.getByText('Qtd.')).toBeOnTheScreen();
+    expect(screen.getByText('1,25')).toBeOnTheScreen();
+    expect(screen.getByText('0,02')).toBeOnTheScreen();
+    expect(screen.getByText('m³')).toBeOnTheScreen();
+    expect(screen.getByText(/R\$\s*250,00/)).toBeOnTheScreen();
   });
 });

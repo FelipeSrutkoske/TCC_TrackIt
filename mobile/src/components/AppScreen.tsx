@@ -96,22 +96,26 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   topBar: {
-    minHeight: 48,
+    minHeight: 52,
     marginHorizontal: 14,
-    marginTop: 6,
-    marginBottom: 4,
-    borderRadius: 18,
+    marginTop: 8,
+    marginBottom: 6,
+    borderRadius: 22,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   brand: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   backSlot: {
     width: 40,
@@ -121,19 +125,19 @@ const styles = StyleSheet.create({
     minWidth: 40,
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 2,
+    gap: 4,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -166,18 +170,18 @@ function RefreshIcon({ color }: { color: string }) {
   return (
     <Svg
       fill="none"
-      height={22}
+      height={20}
       stroke={color}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
       viewBox="0 0 24 24"
-      width={22}
+      width={20}
     >
-      <Path d="M21 12a9 9 0 0 1-15.5 6.2" />
-      <Path d="M3 12A9 9 0 0 1 18.5 5.8" />
-      <Path d="M18 2v4h4" />
-      <Path d="M6 22v-4H2" />
+      <Path d="M21 2v6h-6" />
+      <Path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <Path d="M3 22v-6h6" />
+      <Path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
     </Svg>
   );
 }

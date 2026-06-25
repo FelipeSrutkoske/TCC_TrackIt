@@ -10,6 +10,7 @@ import { RootStackParamList } from '../navigation/types';
 import { getDeliveryHistory } from '../services/deliveries.service';
 import { Delivery, DeliveryHistoryMetrics } from '../types/delivery';
 import { useAppTheme } from '../theme/AppThemeProvider';
+import { getDeliveryDisplayLabel } from '../utils/deliveryDisplay';
 
 type HistoryScreenProps = Partial<NativeStackScreenProps<RootStackParamList, 'History'>>;
 
@@ -80,9 +81,9 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
     >
       <ScrollView contentContainerStyle={styles.container} testID="history-scroll">
         <View style={[styles.hero, { backgroundColor: theme.colors.surfaceAccent }]}> 
-          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Leitura consolidada</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Historico operacional</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Indicadores recentes e entregas encerradas em um painel rapido para consulta em rota.</Text>
+          <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Entregas encerradas</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Historico de entregas</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Consulte as entregas encerradas e as ocorrencias registradas.</Text>
         </View>
 
         {isLoading ? <LoadingState message="Carregando historico..." /> : null}
@@ -91,8 +92,8 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
           <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
             <View style={styles.summaryHeader}>
               <View>
-                <Text style={[styles.sectionEyebrow, { color: theme.colors.textMuted }]}>Resumo das entregas</Text>
-                <Text style={[styles.summaryTitle, { color: theme.colors.text }]}>Performance operacional</Text>
+                <Text style={[styles.sectionEyebrow, { color: theme.colors.textMuted }]}>Seus dados de entrega</Text>
+                <Text style={[styles.summaryTitle, { color: theme.colors.text }]}>Dados de entregas</Text>
               </View>
               <View style={[styles.ratePill, { backgroundColor: theme.colors.highlight }]}> 
                 <Text style={[styles.rateValue, { color: theme.colors.text }]}>{metrics.taxaConclusao}%</Text>
@@ -131,9 +132,14 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
         {!isLoading && !error && items.length > 0 ? (
           <View style={styles.list}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Entregas recentes</Text>
-            <Text style={[styles.listHint, { color: theme.colors.textMuted }]}>Toque em cards sinalizados para auditar ocorrencias.</Text>
+            <Text style={[styles.listHint, { color: theme.colors.textMuted }]}>Detalhes das entregas encerradas.</Text>
             {items.map((delivery) => {
               const hasOccurrences = (delivery.occurrences?.length ?? 0) > 0;
+              const isClosedWithOccurrence = delivery.status === 'COM_OCORRENCIA';
+              const closureDateLabel = isClosedWithOccurrence ? 'Ocorrência em' : 'Finalizada em';
+              const closureDate = isClosedWithOccurrence
+                ? getOccurrenceDate(delivery)
+                : delivery.finalization?.finalizedAt;
               const isExpanded = expandedDeliveryId === delivery.id;
 
               return (
@@ -154,12 +160,14 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
                   ]}
                 >
                   <View style={styles.deliveryHeader}>
-                    <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? `Entrega #${delivery.id}`}</Text>
+                    <Text style={[styles.code, { color: theme.colors.text }]}>{delivery.company?.corporateName ?? getDeliveryDisplayLabel(delivery)}</Text>
                     <StatusBadge status={delivery.status} />
                   </View>
 
-                  {hasOccurrences ? (
-                    <View style={[styles.occurrenceBadge, { backgroundColor: theme.colors.statusDanger }]}>
+                  {hasOccurrences && !isClosedWithOccurrence ? (
+                    <View
+                      style={[styles.occurrenceBadge, { backgroundColor: theme.colors.statusDanger }]}
+                    >
                       <Text style={[styles.occurrenceBadgeText, { color: theme.colors.statusDangerText }]}>Ocorrencia registrada</Text>
                     </View>
                   ) : null}
@@ -170,8 +178,8 @@ export function HistoryScreen({ navigation }: HistoryScreenProps) {
                       <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.createdAt)}</Text>
                     </View>
                     <View style={styles.timeBlock}>
-                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Finalizada em</Text>
-                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(delivery.finalization?.finalizedAt)}</Text>
+                      <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>{closureDateLabel}</Text>
+                      <Text style={[styles.destination, { color: theme.colors.text }]}>{formatDateTime(closureDate)}</Text>
                     </View>
                   </View>
                   <Text style={[styles.destinationLabel, { color: theme.colors.textMuted }]}>Tempo de entrega</Text>
@@ -366,6 +374,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+
+function getOccurrenceDate(delivery: Delivery) {
+  const firstOccurrence = delivery.occurrences?.[0];
+
+  return firstOccurrence?.dataHora ?? firstOccurrence?.createdAt ?? null;
+}
 
 function formatDateTime(value?: string | null) {
   if (!value) {

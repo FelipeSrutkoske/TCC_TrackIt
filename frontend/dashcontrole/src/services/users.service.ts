@@ -6,12 +6,13 @@ export interface Usuario {
   email: string;
   tipoUsuario: 'ADMIN' | 'DASHBOARD' | 'MOTORISTA';
   ativo: boolean;
+  companyId?: number | null;
   driverProfile?: {
     id: number;
     cnh: string;
     placaVeiculo?: string;
   } | null;
-  data_criacao: string;
+  data_criacao?: string;
 }
 
 export type CreateUsuarioDto = {
@@ -20,6 +21,13 @@ export type CreateUsuarioDto = {
   senha: string;
   tipoUsuario: Usuario['tipoUsuario'];
   ativo?: boolean;
+  companyId?: number | null;
+  driverProfile?: {
+    cnh: string;
+    placaVeiculo?: string | null;
+    tipoVeiculo?: string | null;
+    disponivel?: boolean;
+  };
 };
 
 export type UpdateUsuarioDto = Partial<Omit<CreateUsuarioDto, 'senha'> & { senha?: string }>;

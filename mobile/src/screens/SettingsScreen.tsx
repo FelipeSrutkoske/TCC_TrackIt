@@ -21,8 +21,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <TrackItMark height={60} width={46} />
           <View style={styles.heroCopy}>
             <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Configuracoes</Text>
-            <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Aparencia do app</Text>
-            <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Ajuste o modo visual e mantenha a experiencia alinhada ao ambiente de uso.</Text>
+            <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>Configuracoes do app</Text>
+            <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Configure o aplicativo de acordo com suas preferencias.</Text>
           </View>
         </View>
 

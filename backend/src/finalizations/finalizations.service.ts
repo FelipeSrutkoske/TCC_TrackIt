@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -13,6 +14,7 @@ import { UpdateFinalizationDto } from './dto/update-finalization.dto';
 import { DeliveriesService } from '../deliveries/deliveries.service';
 import { StatusEntrega } from '../deliveries/entities/delivery.entity';
 import { DeliveryProofEmailsService } from '../proof-emails/proof-emails.service';
+import { isValidCpf, onlyDigits } from '../common/validators/br-documents';
 
 const DISTANCIA_MAXIMA_DESTINO_METROS = 200;
 const GPS_ACCURACY_MAXIMA_METROS = 100;
@@ -52,6 +54,8 @@ export class FinalizationsService {
         'A entrega só pode ser finalizada quando estiver em rota',
       );
     }
+
+    this.validateReceiverDocument(data.receiverDocument);
 
     const validation = this.validateFinalizationLocation(data, delivery);
 
@@ -178,6 +182,17 @@ export class FinalizationsService {
       gpsValidado: !gpsDivergente,
       gpsDivergente,
     };
+  }
+
+  private validateReceiverDocument(value?: string): void {
+    if (!value) return;
+
+    const documentDigits = onlyDigits(value);
+
+    if (documentDigits.length === 9) return;
+    if (documentDigits.length === 11 && isValidCpf(documentDigits)) return;
+
+    throw new BadRequestException('Informe um CPF valido ou RG com 9 digitos.');
   }
 
   private calculateDistanceMeters(

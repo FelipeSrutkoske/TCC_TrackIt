@@ -2,6 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Header } from "../components/Header";
 import { companiesService, CompanyOption } from "@/services/companies.service";
 import {
@@ -82,11 +99,13 @@ function formatPercent(value: number): string {
 }
 
 function formatMinutes(value: number): string {
-  if (!value) return "0 min";
-  if (value < 60) return `${value} min`;
+  const roundedValue = Math.round(value);
 
-  const hours = Math.floor(value / 60);
-  const minutes = value % 60;
+  if (!roundedValue) return "0 min";
+  if (roundedValue < 60) return `${roundedValue} min`;
+
+  const hours = Math.floor(roundedValue / 60);
+  const minutes = roundedValue % 60;
   return minutes ? `${hours}h ${minutes}min` : `${hours}h`;
 }
 
@@ -162,7 +181,7 @@ function ChartCard({
   );
 }
 
-function DonutChart({
+function RechartsDonutChart({
   items,
 }: {
   items: Array<{ label: string; value: number; color: string }>;
@@ -170,50 +189,28 @@ function DonutChart({
   const total = items.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) return <EmptyChart />;
 
-  const radius = 72;
-  const circumference = 2 * Math.PI * radius;
-  const segments = items.reduce<Array<{ label: string; value: number; color: string; length: number; offset: number }>>(
-    (acc, item) => {
-      const previous = acc[acc.length - 1];
-      const offset = previous ? previous.offset + previous.length : 0;
-      return [
-        ...acc,
-        {
-          ...item,
-          length: (item.value / total) * circumference,
-          offset,
-        },
-      ];
-    },
-    [],
-  );
-
   return (
     <div className="grid gap-5 sm:grid-cols-[190px_1fr] sm:items-center">
-      <svg className="mx-auto" height="190" viewBox="0 0 190 190" width="190">
-        <circle cx="95" cy="95" fill="none" r={radius} stroke="#e3e8e3" strokeWidth="24" />
-        {segments.map((item) => (
-          <circle
-            cx="95"
-            cy="95"
-            fill="none"
-            key={item.label}
-            r={radius}
-            stroke={item.color}
-            strokeDasharray={`${item.length} ${circumference - item.length}`}
-            strokeDashoffset={-item.offset}
-            strokeLinecap="round"
-            strokeWidth="24"
-            transform="rotate(-90 95 95)"
-          />
-        ))}
-        <text fill="#1f2320" fontSize="26" fontWeight="800" textAnchor="middle" x="95" y="90">
-          {total}
-        </text>
-        <text fill="#748071" fontSize="12" fontWeight="700" textAnchor="middle" x="95" y="110">
-          entregas
-        </text>
-      </svg>
+      <ResponsiveContainer height={190} width="100%">
+        <PieChart>
+          <Pie
+            cx="50%"
+            cy="50%"
+            data={items}
+            dataKey="value"
+            innerRadius="60%"
+            nameKey="label"
+            outerRadius="90%"
+            paddingAngle={2}
+            stroke="none"
+          >
+            {items.map((item) => (
+              <Cell fill={item.color} key={item.label} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value, name) => [`${value ?? 0}`, name]} />
+        </PieChart>
+      </ResponsiveContainer>
       <div className="space-y-3">
         {items.map((item) => (
           <div className="flex items-center justify-between gap-3 text-sm" key={item.label}>
@@ -267,56 +264,82 @@ function HorizontalBars({
   );
 }
 
-function LineChartSvg({ data }: { data: DeliveryAnalyticsResponse["charts"]["deliveriesByDay"] }) {
+function RechartsLineChart({ data }: { data: DeliveryAnalyticsResponse["charts"]["deliveriesByDay"] }) {
   if (data.length === 0) return <EmptyChart />;
 
-  const width = 720;
-  const height = 240;
-  const padding = 34;
-  const max = Math.max(
-    ...data.flatMap((item) => [item.created, item.finalized, item.withOccurrence]),
-    1,
+  return (
+    <ResponsiveContainer height={260} width="100%">
+      <LineChart data={data} margin={{ bottom: 8, left: -12, right: 16, top: 8 }}>
+        <CartesianGrid stroke="#d8ddd8" strokeDasharray="4 6" vertical={false} />
+        <XAxis dataKey="date" tick={{ fill: "#748071", fontSize: 11 }} tickFormatter={(value) => formatDate(value)} />
+        <YAxis tick={{ fill: "#748071", fontSize: 11 }} />
+        <Tooltip
+          contentStyle={{ border: "1px solid #c8cec8", borderRadius: 10 }}
+          formatter={(value, name) => [`${value ?? 0}`, name]}
+          labelFormatter={(label) => formatDate(String(label))}
+        />
+        <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+        <Line dataKey="created" name="Criadas" stroke="#4f654b" strokeWidth={3} type="monotone" />
+        <Line dataKey="finalized" name="Finalizadas" stroke="#22c55e" strokeWidth={3} type="monotone" />
+        <Line dataKey="withOccurrence" name="Com ocorrencia" stroke="#f97316" strokeWidth={3} type="monotone" />
+      </LineChart>
+    </ResponsiveContainer>
   );
-  const x = (index: number) =>
-    data.length === 1
-      ? width / 2
-      : padding + (index * (width - padding * 2)) / (data.length - 1);
-  const y = (value: number) => height - padding - (value / max) * (height - padding * 2);
-  const points = (key: "created" | "finalized" | "withOccurrence") =>
-    data.map((item, index) => `${x(index)},${y(item[key])}`).join(" ");
+}
+
+function RechartsAreaChart({ data }: { data: DeliveryAnalyticsResponse["charts"]["deliveriesByDay"] }) {
+  if (data.length === 0) return <EmptyChart />;
 
   return (
-    <div className="overflow-x-auto">
-      <svg className="min-w-[560px]" height={height} viewBox={`0 0 ${width} ${height}`} width="100%">
-        {[0, 0.5, 1].map((ratio) => (
-          <line
-            key={ratio}
-            stroke="#d8ddd8"
-            strokeDasharray="4 6"
-            x1={padding}
-            x2={width - padding}
-            y1={padding + ratio * (height - padding * 2)}
-            y2={padding + ratio * (height - padding * 2)}
-          />
-        ))}
-        <polyline fill="none" points={points("created")} stroke="#4f654b" strokeWidth="4" />
-        <polyline fill="none" points={points("finalized")} stroke="#22c55e" strokeWidth="4" />
-        <polyline fill="none" points={points("withOccurrence")} stroke="#f97316" strokeWidth="4" />
-        {data.map((item, index) => (
-          <g key={item.date}>
-            <circle cx={x(index)} cy={y(item.created)} fill="#4f654b" r="4" />
-            <text fill="#748071" fontSize="11" textAnchor="middle" x={x(index)} y={height - 8}>
-              {formatDate(item.date)}
-            </text>
-          </g>
-        ))}
-      </svg>
-      <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-[#5f695d]">
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-[#4f654b]" />Criadas</span>
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />Finalizadas</span>
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-[#f97316]" />Com ocorrencia</span>
-      </div>
-    </div>
+    <ResponsiveContainer height={220} width="100%">
+      <AreaChart data={data} margin={{ bottom: 8, left: -12, right: 16, top: 8 }}>
+        <defs>
+          <linearGradient id="colorCreated" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="5%" stopColor="#4f654b" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#4f654b" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="colorFinalized" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="#d8ddd8" strokeDasharray="4 6" vertical={false} />
+        <XAxis dataKey="date" tick={{ fill: "#748071", fontSize: 11 }} tickFormatter={(value) => formatDate(value)} />
+        <YAxis tick={{ fill: "#748071", fontSize: 11 }} />
+        <Tooltip
+          contentStyle={{ border: "1px solid #c8cec8", borderRadius: 10 }}
+          formatter={(value, name) => [`${value ?? 0}`, name]}
+          labelFormatter={(label) => formatDate(String(label))}
+        />
+        <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+        <Area dataKey="created" fill="url(#colorCreated)" name="Criadas" stroke="#4f654b" strokeWidth={2} type="monotone" />
+        <Area dataKey="finalized" fill="url(#colorFinalized)" name="Finalizadas" stroke="#22c55e" strokeWidth={2} type="monotone" />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function RechartsDriverRanking({ items }: { items: DeliveryAnalyticsResponse["charts"]["driverRanking"] }) {
+  const visibleItems = items.filter((item) => item.completed > 0).slice(0, 5);
+
+  if (visibleItems.length === 0) return <EmptyChart />;
+
+  return (
+    <ResponsiveContainer height={220} width="100%">
+      <BarChart data={visibleItems} layout="vertical" margin={{ bottom: 8, left: 16, right: 24, top: 8 }}>
+        <CartesianGrid stroke="#d8ddd8" strokeDasharray="4 6" vertical={false} />
+        <XAxis tick={{ fill: "#748071", fontSize: 11 }} type="number" />
+        <YAxis dataKey="driverName" tick={{ fill: "#1f2320", fontSize: 11, fontWeight: 700 }} type="category" width={120} />
+        <Tooltip
+          contentStyle={{ border: "1px solid #c8cec8", borderRadius: 10 }}
+          formatter={(value, _name, props) => {
+            const payload = props?.payload as DeliveryAnalyticsResponse["charts"]["driverRanking"][number] | undefined;
+            return [`${value ?? 0} concl. / ${payload?.deliveries ?? 0} entregas`, "Concluidas"];
+          }}
+        />
+        <Bar dataKey="completed" fill="#4f654b" name="Concluidas" radius={[0, 6, 6, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -590,17 +613,26 @@ export default function DashboardPage() {
               <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 <div className="xl:col-span-2">
                   <ChartCard description="Criadas, finalizadas e com ocorrencia por dia" title="Linha temporal">
-                    <LineChartSvg data={charts?.deliveriesByDay ?? []} />
+                    <RechartsLineChart data={charts?.deliveriesByDay ?? []} />
                   </ChartCard>
                 </div>
                 <ChartCard description="Participacao de cada status" title="Distribuicao por status">
-                  <DonutChart
+                  <RechartsDonutChart
                     items={(charts?.statusDistribution ?? []).map((item) => ({
                       label: item.label,
                       value: item.value,
                       color: STATUS_COLORS[item.status] ?? "#4f654b",
                     }))}
                   />
+                </ChartCard>
+              </section>
+
+              <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <ChartCard description="Volume criado e finalizado ao longo do periodo" title="Evolucao operacional">
+                  <RechartsAreaChart data={charts?.deliveriesByDay ?? []} />
+                </ChartCard>
+                <ChartCard description="Top 5 motoristas por entregas concluidas" title="Top motoristas">
+                  <RechartsDriverRanking items={charts?.driverRanking ?? []} />
                 </ChartCard>
               </section>
 

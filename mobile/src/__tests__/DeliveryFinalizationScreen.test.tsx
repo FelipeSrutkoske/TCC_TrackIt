@@ -83,18 +83,58 @@ describe('DeliveryFinalizationScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Encerramento operacional')).toBeOnTheScreen();
-    expect(screen.getByText('Fechar entrega com validacao completa')).toBeOnTheScreen();
+    expect(screen.queryByText('Encerramento operacional')).toBeNull();
+    expect(screen.queryByText('Fechar entrega com validacao completa')).toBeNull();
+    expect(screen.getByText('Fechamento operacional')).toBeOnTheScreen();
+    expect(screen.getByText('Recebedor e comprovante')).toBeOnTheScreen();
+    expect(screen.getByText('Dados do recebedor')).toBeOnTheScreen();
     expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
+    expect(screen.getByText('Entrega #2')).toHaveStyle({ color: '#39FF14' });
+    expect(screen.getByPlaceholderText('Digite o numero do documento')).toBeOnTheScreen();
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
 
     expect(await screen.findByText('Registre a assinatura antes de concluir a entrega.')).toBeOnTheScreen();
     expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
     expect(mockFinalizeDelivery).not.toHaveBeenCalled();
+  });
+
+  it('shows the company delivery sequence while keeping the real id for API calls', async () => {
+    const navigation = { reset: jest.fn() };
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6, accuracy: 12 });
+    mockFinalizeDelivery.mockResolvedValueOnce({ id: 1, deliveryId: 31 });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={navigation}
+          route={{
+            key: 'DeliveryFinalization-31',
+            name: 'DeliveryFinalization',
+            params: { delivery: { ...deliveryFixture, id: 31, companySequence: 1 } },
+          }}
+        />
+      </AppThemeProvider>,
+    );
+
+    expect(screen.getByText('Entrega #1')).toHaveStyle({ color: '#39FF14' });
+    expect(screen.queryByText('Entrega #31')).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByRole('button', { name: 'Assinar entrega' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    await waitFor(() => {
+      expect(mockFinalizeDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({ deliveryId: 31 }),
+        'token-1',
+      );
+    });
   });
 
   it('disables parent scroll while the user is drawing the signature', () => {
@@ -151,7 +191,7 @@ describe('DeliveryFinalizationScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Conferencia da carga')).toBeOnTheScreen();
+    expect(screen.getByText('Detalhes da carga')).toBeOnTheScreen();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
     expect(screen.getByText('Documentos')).toBeOnTheScreen();
   });
@@ -169,7 +209,7 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 
@@ -180,7 +220,7 @@ describe('DeliveryFinalizationScreen', () => {
   });
 
   it('finalizes the delivery with signature and GPS coordinates', async () => {
-    const replace = jest.fn();
+    const reset = jest.fn();
     mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6 });
     mockFinalizeDelivery.mockResolvedValueOnce({
       id: 1,
@@ -195,14 +235,14 @@ describe('DeliveryFinalizationScreen', () => {
     render(
       <AppThemeProvider>
         <DeliveryFinalizationScreen
-          navigation={{ replace }}
+          navigation={{ reset } as never}
           route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
         />
       </AppThemeProvider>,
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 
@@ -213,7 +253,7 @@ describe('DeliveryFinalizationScreen', () => {
         expect.objectContaining({
           deliveryId: 2,
           receiverName: 'Maria',
-          receiverDocument: '12345678901',
+          receiverDocument: '12345678909',
           receiverRelation: 'Irmao',
           latitude: -23.5,
           longitude: -46.6,
@@ -223,7 +263,69 @@ describe('DeliveryFinalizationScreen', () => {
       );
     });
 
-    expect(replace).toHaveBeenCalledWith('History');
+    expect(reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'History' }] });
+  });
+
+  it('masks receiver CPF while keeping only digits in the finalization payload', async () => {
+    mockGetCurrentCoordinates.mockResolvedValueOnce({ latitude: -23.5, longitude: -46.6 });
+    mockFinalizeDelivery.mockResolvedValueOnce({
+      id: 1,
+      deliveryId: 2,
+      receiverName: 'Maria',
+      signatureUrl: 'signature-data',
+      latitude: -23.5,
+      longitude: -46.6,
+      finalizedAt: '2026-01-01T10:00:00.000Z',
+    });
+
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    const receiverDocumentInput = screen.getByLabelText('Documento do recebedor');
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(receiverDocumentInput, '12345678909');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
+    expect(screen.getByLabelText('Documento do recebedor').props.value).toBe('123.456.789-09');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    await waitFor(() => {
+      expect(mockFinalizeDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({ receiverDocument: '12345678909' }),
+        'token-1',
+      );
+    });
+  });
+
+  it('rejects invalid receiver CPF before requesting GPS coordinates', async () => {
+    render(
+      <AppThemeProvider>
+        <DeliveryFinalizationScreen
+          navigation={{ replace: jest.fn() }}
+          route={{ key: 'DeliveryFinalization-1', name: 'DeliveryFinalization', params: { delivery: deliveryFixture } }}
+        />
+      </AppThemeProvider>,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '11111111111');
+    fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
+    fireEvent.press(screen.getByTestId('signature-pad'));
+
+    fireEvent.press(screen.getByRole('button', { name: 'Finalizar entrega' }));
+
+    expect(await screen.findByText('Informe um CPF valido ou RG com 9 digitos.')).toBeOnTheScreen();
+    expect(mockGetCurrentCoordinates).not.toHaveBeenCalled();
+    expect(mockFinalizeDelivery).not.toHaveBeenCalled();
   });
 
   it('ignores rapid repeated submit taps while a finalization is already in progress', async () => {
@@ -254,7 +356,7 @@ describe('DeliveryFinalizationScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
-    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678901');
+    fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
     fireEvent.changeText(screen.getByLabelText('Parentesco ou grau'), 'Irmao');
     fireEvent.press(screen.getByTestId('signature-pad'));
 
