@@ -14,6 +14,9 @@ Dev.MD
 !.yarn/releases
 !.yarn/versions
 
+/docs/funcionalidades-trackit/
+rubrica-trackit.html
+
 #PROJECT_FUNCIONALITIES
 PROJECT_FUNCTIONALITIES.md
 PROOF_EMAIL_FUNCTIONALITY.md
