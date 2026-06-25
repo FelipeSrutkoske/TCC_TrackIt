@@ -300,6 +300,12 @@ export default function DeliveryDetailPage() {
 
   async function sendProofEmail() {
     if (!delivery) return;
+
+    if (!delivery.finalization) {
+      setProofEmailMessage("Comprovante liberado somente apos a finalizacao da entrega.");
+      return;
+    }
+
     setProofEmailLoading(true);
     setProofEmailMessage(null);
 
@@ -326,6 +332,7 @@ export default function DeliveryDetailPage() {
 
   const status = delivery ? STATUS_CONFIG[delivery.status] : null;
   const timeline = delivery ? buildTimeline(delivery) : [];
+  const canSendProofEmail = Boolean(delivery?.finalization);
 
   return (
     <>
@@ -472,12 +479,13 @@ export default function DeliveryDetailPage() {
                         </label>
                         <button
                           className="mt-3 w-full rounded-xl bg-[#4f654b] px-4 py-2 text-sm font-black text-white transition hover:bg-[#40543d] disabled:opacity-60"
-                          disabled={proofEmailLoading}
+                          disabled={proofEmailLoading || !canSendProofEmail}
                           onClick={() => void sendProofEmail()}
                           type="button"
                         >
                           {proofEmailLoading ? "Enviando..." : proofEmails.length ? "Reenviar comprovante" : "Enviar comprovante"}
                         </button>
+                        {!canSendProofEmail ? <p className="mt-2 text-xs font-bold text-[#5f695d]">Comprovante liberado somente apos a finalizacao da entrega.</p> : null}
                         {proofEmailMessage ? <p className="mt-2 text-xs font-bold text-[#5f695d]">{proofEmailMessage}</p> : null}
                       </div>
 

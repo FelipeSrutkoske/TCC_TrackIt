@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-test('pagina administrativo usa filtro de empresa para admin e modais para acoes', () => {
+test('pagina administrativo usa filtro de empresa para admin', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 
-  assert.match(source, /title="Administrativo"/);
+  assert.match(source, /title=\{isAdmin \? "Administrativo" : "Configuracoes"\}/);
   assert.match(source, /authService\.getUser\(\)/);
   assert.match(source, /empresaSelecionada/);
   assert.match(source, /modalEmpresaAberto/);
@@ -23,7 +23,7 @@ test('pagina administrativo usa filtro de empresa para admin e modais para acoes
   assert.doesNotMatch(source, /<form className="rounded-2xl[\s\S]+Cadastrar cliente[\s\S]+<form className="rounded-2xl[\s\S]+Criar usuario/);
 });
 
-test('empresa criada fica disponivel para usuario sem refresh', () => {
+test('empresa criada fica disponivel para usuario imediatamente', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
   const createCompanyBlock = source.match(/async function handleCreateCompany[\s\S]+?\n  }\n\n  async function handleCreateUser/);
 
@@ -53,7 +53,7 @@ test('cadastro de usuario e motorista usa feedback especifico', () => {
   assert.match(source, /Nao foi possivel criar usuario\./);
 });
 
-test('controle de usuarios permite editar acessos operacionais sem listar admin', () => {
+test('controle de usuarios permite editar acessos de usuario sem listar admin', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /Controle de usuários/);
@@ -67,7 +67,7 @@ test('controle de usuarios permite editar acessos operacionais sem listar admin'
   assert.match(source, /Motorista/);
 });
 
-test('secoes de usuarios e carteira sao drops expansiveis com seta e usuarios ordenados por tipo', () => {
+test('secoes de usuarios e carteira sao drops expansiveis com icone e usuarios ordenados por tipo de acesso', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /expandedSections/);

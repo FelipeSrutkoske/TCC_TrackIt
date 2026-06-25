@@ -9,6 +9,7 @@ import {
   deliveriesService,
 } from "@/services/deliveries.service";
 import { companiesService, CompanyOption } from "@/services/companies.service";
+import { useToast } from "@/contexts/ToastContext";
 import { geocodeAddress } from "@/services/geocoding.service";
 import { usersService, Usuario } from "@/services/users.service";
 
@@ -62,6 +63,7 @@ function addressHasNumber(address: string): boolean {
 
 export default function CriarEntregaPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [destinationAddress, setDestinationAddress] = useState("");
   const [deliveryEstimate, setDeliveryEstimate] = useState("");
   const [motoristaId, setMotoristaId] = useState("");
@@ -141,7 +143,7 @@ export default function CriarEntregaPage() {
     }
 
     if (!addressHasNumber(destinationAddress)) {
-      return "Informe o número do endereço para orientar a entrega.";
+      return "Informe o número do endereço para localizar o destino corretamente. Ex.: Rua das Flores, 123.";
     }
 
     if (!empresaId) {
@@ -212,11 +214,11 @@ export default function CriarEntregaPage() {
         detalhesEntrega: detalhesEntrega.map(normalizarDetalheEntrega),
       });
 
+      addToast("Entrega criada com sucesso.", "success");
       router.push("/entregas");
     } catch (erro) {
-      setErroCriacaoEntrega(
-        erro instanceof Error ? erro.message : "Nao foi possivel criar a entrega.",
-      );
+      const mensagemErro = erro instanceof Error ? erro.message : "Nao foi possivel criar a entrega.";
+      setErroCriacaoEntrega(mensagemErro);
     } finally {
       setSalvandoEntrega(false);
     }

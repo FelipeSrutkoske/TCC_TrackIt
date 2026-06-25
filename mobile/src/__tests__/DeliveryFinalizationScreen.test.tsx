@@ -90,7 +90,7 @@ describe('DeliveryFinalizationScreen', () => {
     expect(screen.getByText('Dados do recebedor')).toBeOnTheScreen();
     expect(screen.getByText('ACME Transportes LTDA')).toBeOnTheScreen();
     expect(screen.getByText('Entrega #2')).toHaveStyle({ color: '#39FF14' });
-    expect(screen.getByPlaceholderText('CPF ou RG validos.')).toBeOnTheScreen();
+    expect(screen.getByPlaceholderText('Digite o numero do documento')).toBeOnTheScreen();
 
     fireEvent.changeText(screen.getByLabelText('Nome do recebedor'), 'Maria');
     fireEvent.changeText(screen.getByLabelText('Documento do recebedor'), '12345678909');
@@ -191,7 +191,7 @@ describe('DeliveryFinalizationScreen', () => {
       </AppThemeProvider>,
     );
 
-    expect(screen.getByText('Conferencia da carga')).toBeOnTheScreen();
+    expect(screen.getByText('Detalhes da carga')).toBeOnTheScreen();
     expect(screen.getByText('Caixa de documentos')).toBeOnTheScreen();
     expect(screen.getByText('Documentos')).toBeOnTheScreen();
   });

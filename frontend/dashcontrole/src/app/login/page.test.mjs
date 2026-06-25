@@ -9,5 +9,5 @@ test('pagina de login nao oferece cadastro publico de usuario', () => {
   assert.doesNotMatch(source, /Criar nova conta/);
   assert.doesNotMatch(source, /Ainda não tem conta\?/);
   assert.doesNotMatch(source, /Registrar Usuário/);
-  assert.match(source, /Entrar Seguramente/);
+  assert.match(source, /Entrar na sua conta/);
 });

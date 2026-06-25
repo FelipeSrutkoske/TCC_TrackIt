@@ -32,13 +32,13 @@ import { openDeliveryAddressInMaps, openDeliveryDirectionsInMaps } from '../util
 function getDeliveryPhase(status: Delivery['status']) {
   switch (status) {
     case 'AGUARDANDO_MOTORISTA':
-      return 'Aguardando despacho';
+      return 'Aguardando inicio';
     case 'EM_ROTA':
       return 'Em deslocamento';
     case 'ENTREGUE':
       return 'Entrega concluida';
     case 'CANCELADO':
-      return 'Ocorrencia encerrada';
+      return 'Cancelada';
     case 'COM_OCORRENCIA':
       return 'Com ocorrencia';
   }
@@ -54,7 +54,7 @@ function toNumber(value?: number | string | null) {
 }
 
 function getDriverName(delivery: Delivery) {
-  return delivery.driver?.user?.nome ?? `#${delivery.driverId}`;
+  return delivery.driver?.user?.nome ?? 'Motorista vinculado';
 }
 
 function formatDateTime(value?: string | null) {
@@ -163,7 +163,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
             <StatusBadge status={delivery.status} />
           </View>
 
-          <Text style={[styles.dispatchDescription, { color: theme.colors.accentText }]}>Confira os dados operacionais antes de iniciar o deslocamento.</Text>
+          <Text style={[styles.dispatchDescription, { color: theme.colors.accentText }]}>Confira os dados da entrega antes de iniciar a rota.</Text>
 
           <View style={styles.metricRows}>
             <View style={styles.metricGrid}>
@@ -184,8 +184,7 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
 
           <View style={styles.contextPanel}>
             <View style={styles.contextHeader}>
-              <Text style={[styles.contextTitle, { color: theme.colors.accentText }]}>Contexto operacional</Text>
-              <Text style={[styles.contextHint, { color: theme.colors.accentText }]}>destino da missao</Text>
+              <Text style={[styles.contextTitle, { color: theme.colors.accentText }]}>Endereço</Text>
             </View>
             <Text style={[styles.destinationText, { color: theme.colors.accentText }]}>{delivery.destinationAddress}</Text>
           </View>
@@ -193,8 +192,8 @@ export function DeliveryDetailsScreen({ route, navigation }: DeliveryDetailsScre
 
         <DeliveryDetailsSummary
           details={delivery.details}
-          emptyMessage="Nenhum detalhe de carga informado para esta entrega."
-          title="Detalhes da carga"
+          emptyMessage="Nenhum detalhe de entrega informado para esta entrega."
+          title="Detalhes da entrega"
         />
 
         <DeliveryRoutePreview delivery={delivery} />

@@ -76,7 +76,7 @@ describe('DeliveryOccurrenceScreen', () => {
 
     fireEvent.press(screen.getByText('Outros'));
     fireEvent.changeText(screen.getByLabelText('Descricao da ocorrencia'), 'Acesso ao local estava bloqueado.');
-    fireEvent.press(screen.getByRole('button', { name: 'Enviar ocorrencia' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Registrar ocorrencia' }));
 
     await waitFor(() => {
       expect(mockCreateOccurrence).toHaveBeenCalledWith(

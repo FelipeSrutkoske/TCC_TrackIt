@@ -8,7 +8,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { authService } from "@/services/auth.service";
 import { companiesService, CompanyOption, CompanyWithAnalytics } from "@/services/companies.service";
 import { usersService, UpdateUsuarioDto, Usuario } from "@/services/users.service";
-import { isValidCnpj, maskCnpj, maskCep, maskPhone, onlyDigits } from "@/utils/masks";
+import { isValidCnpj, maskCnpj, maskCep, maskPhone, maskVehiclePlate, onlyDigits } from "@/utils/masks";
 
 function formatPercent(value: number): string {
   return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
@@ -152,6 +152,7 @@ export default function CompaniesPage() {
   const [userForm, setUserForm] = useState(emptyUserForm("DASHBOARD"));
   const [editUserForm, setEditUserForm] = useState(emptyEditUserForm);
   const [expandedSections, setExpandedSections] = useState({ users: false, companies: false });
+  const [reloadToken, setReloadToken] = useState(0);
 
   const isAdmin = currentUser?.tipoUsuario === "ADMIN";
   const isDashboard = currentUser?.tipoUsuario === "DASHBOARD";
@@ -206,7 +207,7 @@ export default function CompaniesPage() {
     return () => {
       active = false;
     };
-  }, [currentUser, empresaSelecionada, fixedCompanyId, isAdmin, selectedCompanyId]);
+  }, [currentUser, empresaSelecionada, fixedCompanyId, isAdmin, reloadToken, selectedCompanyId]);
 
   const filtered = companies.filter((company) => {
     const text = filter.toLowerCase();
@@ -249,6 +250,10 @@ export default function CompaniesPage() {
 
   function resetUserForm(tipoUsuario: Usuario["tipoUsuario"]) {
     setUserForm(emptyUserForm(tipoUsuario, isAdmin ? empresaSelecionada : String(fixedCompanyId ?? "")));
+  }
+
+  function refreshAdministrativeData() {
+    setReloadToken((current) => current + 1);
   }
 
   function handleCnpjChange(value: string) {
@@ -295,7 +300,7 @@ export default function CompaniesPage() {
         contactEmail: data.contactEmail ?? prev.contactEmail,
         dataLoaded: true,
       }));
-      addToast("Dados do CNPJ encontrado.", "success");
+      addToast("Dados de CNPJ preenchidos.", "success");
     } catch (err) {
       setCompanyForm((prev) => ({ ...prev, cnpjValid: false, dataLoaded: false }));
       addToast(err instanceof Error ? err.message : "Nao foi possivel consultar o CNPJ.", "error");
@@ -381,6 +386,7 @@ export default function CompaniesPage() {
       resetUserForm(userForm.tipoUsuario);
       setModalUsuarioAberto(false);
       setModalMotoristaAberto(false);
+      refreshAdministrativeData();
       addToast(userForm.tipoUsuario === "MOTORISTA" ? "Motorista criado com sucesso." : "Usuário criado com sucesso.", "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Nao foi possivel criar usuario.";
@@ -521,7 +527,7 @@ export default function CompaniesPage() {
               ) : null}
 
               {!isAdmin && fixedCompanyName ? (
-                <p className="rounded-lg border border-[#c8d7c0] bg-white px-4 py-3 text-xs font-bold text-[#5d6f63] sm:col-span-2">Empresa fixa: {companyName(fixedCompanyName)}</p>
+                <p className="rounded-lg border border-[#c8d7c0] bg-white px-4 py-3 text-xs font-bold text-[#5d6f63] sm:col-span-2">Empresa: {companyName(fixedCompanyName)}</p>
               ) : null}
             </div>
           </div>
@@ -547,7 +553,7 @@ export default function CompaniesPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Placa do veículo</label>
-                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm uppercase text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={10} onChange={(e) => setUserForm((prev) => ({ ...prev, placaVeiculo: e.target.value.toUpperCase() }))} placeholder="ABC1D23" value={userForm.placaVeiculo} />
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm uppercase text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" maxLength={8} onChange={(e) => setUserForm((prev) => ({ ...prev, placaVeiculo: maskVehiclePlate(e.target.value) }))} placeholder="Placa Valida" value={userForm.placaVeiculo} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Tipo do veículo</label>
@@ -572,7 +578,26 @@ export default function CompaniesPage() {
 
   return (
     <>
-      <Header title={isAdmin ? "Administrativo" : "Configuracoes"} breadcrumb={["Home", isAdmin ? "Administrativo" : "Configuracoes"]} />
+      <Header
+        actions={
+          <button
+            aria-label="Atualizar administrativo"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#c8cec8] bg-white text-[#4f654b] transition hover:bg-[#e0eadd] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={loading}
+            onClick={refreshAdministrativeData}
+            title="Atualizar"
+            type="button"
+          >
+            <svg className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M23 4v6h-6" />
+              <path d="M1 20v-6h6" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
+        }
+        title={isAdmin ? "Administrativo" : "Configuracoes"}
+        breadcrumb={["Home", isAdmin ? "Administrativo" : "Configuracoes"]}
+      />
       <div className="page-body">
         <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
           <section className="rounded-3xl border border-[#c8cec8] bg-[linear-gradient(135deg,#eff6ff_0%,#f2f5f2_100%)] p-6 shadow-sm sm:p-8">
@@ -588,8 +613,7 @@ export default function CompaniesPage() {
                   <select className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm" onChange={(e) => setStatusFilter(e.target.value)} value={statusFilter}>
                     <option value="">Todos os status</option>
                     <option value="ativo">Ativos</option>
-                    <option value="inadimplente">Inadimplentes</option>
-                    <option value="cancelado">Cancelados</option>
+                    <option value="cancelado">Inativos</option>
                   </select>
                   <select className="rounded-xl border border-[#c4ccc3] bg-white px-4 py-2.5 text-sm" onChange={(e) => setEmpresaSelecionada(e.target.value)} value={empresaSelecionada}>
                     <option value="">Todas as empresas</option>
@@ -704,7 +728,7 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      <Modal isOpen={modalEmpresaAberto} onClose={() => { setModalEmpresaAberto(false); setCompanyForm(emptyCompanyForm); }} title="Cadastrar cliente" description="Consulte o CNPJ para preencher automaticamente via BrasilAPI." size="xl">
+      <Modal isOpen={modalEmpresaAberto} onClose={() => { setModalEmpresaAberto(false); setCompanyForm(emptyCompanyForm); }} title="Cadastrar cliente" description="Consulte o CNPJ." size="xl">
         <form className="space-y-5" onSubmit={handleCreateCompany}>
 
           {/* ── Seção: Identificação ──────────────────────── */}
@@ -747,14 +771,15 @@ export default function CompaniesPage() {
                 >
                   {lookingUpCnpj ? "Consultando..." : "Consultar"}
                 </button>
-                {companyForm.situacaoCnpj ? (
-                  <span className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
-                    companyForm.situacaoCnpj.toLowerCase() === 'ativa'
-                      ? 'border border-[#10935c]/30 bg-[#dff7e7] text-[#10935c]'
-                      : 'border border-red-300 bg-red-50 text-red-700'
-                  }`}>
-                    {companyForm.situacaoCnpj}
-                  </span>
+                {companyForm.dataLoaded || companyForm.situacaoCnpj ? (
+                  <button
+                    className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-red-600 transition hover:bg-red-100"
+                    onClick={() => setCompanyForm(emptyCompanyForm)}
+                    type="button"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                    Limpar
+                  </button>
                 ) : null}
               </div>
 
@@ -892,7 +917,7 @@ export default function CompaniesPage() {
               </span>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Contato</p>
-                <p className="text-sm font-bold text-[#18231c]">Dados editáveis</p>
+                <p className="text-sm font-bold text-[#18231c]">Dados de contato</p>
               </div>
             </div>
 
@@ -903,7 +928,7 @@ export default function CompaniesPage() {
                   <input
                     className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none"
                     onChange={(e) => setCompanyForm((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))}
-                    placeholder="(00) 00000-0000"
+                    placeholder="(44) 99999-9999"
                     value={companyForm.phone}
                   />
                 </div>
@@ -929,7 +954,7 @@ export default function CompaniesPage() {
               </span>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5d6f63]">Sistema</p>
-                <p className="text-sm font-bold text-[#18231c]">Status no sistema</p>
+                <p className="text-sm font-bold text-[#18231c]">Situação</p>
               </div>
             </div>
 
@@ -941,8 +966,7 @@ export default function CompaniesPage() {
                 value={companyForm.subscriptionStatus}
               >
                 <option value="ativo">Ativo</option>
-                <option value="inadimplente">Inadimplente</option>
-                <option value="cancelado">Cancelado</option>
+                <option value="cancelado">Inativo</option>
               </select>
             </div>
           </section>
@@ -992,7 +1016,7 @@ export default function CompaniesPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Nova senha</label>
-                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setEditUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Preencha apenas se for trocar" type="password" value={editUserForm.senha} />
+                  <input className="w-full rounded-lg border border-[#c8d7c0] bg-white px-4 py-2.5 text-sm text-[#18231c] placeholder:text-[#7a9774] focus:border-[#10935c] focus:outline-none" minLength={6} onChange={(e) => setEditUserForm((prev) => ({ ...prev, senha: e.target.value }))} placeholder="Preencha a nova senha" type="password" value={editUserForm.senha} />
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#5d6f63]">Status</label>

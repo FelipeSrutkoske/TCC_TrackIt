@@ -24,9 +24,25 @@ export function maskCnpj(value: string): string {
 export function maskPhone(value: string): string {
   const digits = onlyDigits(value).slice(0, 11);
 
-  return digits
-    .replace(/^(\d{2})(\d)/, '($1) $2')
-    .replace(/^(\(\d{2}\) \d{5})(\d)/, '$1-$2');
+  if (digits.length <= 2) return digits;
+
+  const ddd = digits.slice(0, 2);
+  const number = digits.slice(2);
+  const firstPartSize = number.length > 8 ? 5 : 4;
+  const firstPart = number.slice(0, firstPartSize);
+  const secondPart = number.slice(firstPartSize);
+
+  return `(${ddd}) ${firstPart}${secondPart ? `-${secondPart}` : ''}`;
+}
+
+export function maskVehiclePlate(value: string): string {
+  const cleaned = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7);
+
+  if (cleaned.length >= 5 && /^\d$/.test(cleaned[3]) && /^[A-Z]$/.test(cleaned[4])) {
+    return cleaned;
+  }
+
+  return cleaned.length > 3 ? `${cleaned.slice(0, 3)}-${cleaned.slice(3)}` : cleaned;
 }
 
 export function maskCep(value: string): string {

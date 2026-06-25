@@ -83,7 +83,7 @@ export default function LoginPage() {
 
                 <div className="pt-6">
                   <button disabled={loading} type="submit" className="w-full py-3 rounded-xl bg-[#4f654b] hover:bg-[#3e523a] disabled:opacity-70 text-white font-bold text-sm transition-all shadow-md">
-                    {loading ? "Processando..." : "Entrar Seguramente"}
+                    {loading ? "Processando..." : "Entrar na sua conta"}
                   </button>
                 </div>
              </form>

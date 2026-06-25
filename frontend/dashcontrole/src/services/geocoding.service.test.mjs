@@ -29,7 +29,7 @@ test('geocodeAddress falha claramente quando a chave publica do Google Maps nao 
   );
 });
 
-test('geocodeAddress usa mensagem profissional quando endereco nao tem resultado', async () => {
+test('geocodeAddress usa mensagem clara quando retorna endereco nao encontrado', async () => {
   const fetchImpl = async () => ({
     ok: true,
     json: async () => ({ status: 'ZERO_RESULTS', results: [] }),

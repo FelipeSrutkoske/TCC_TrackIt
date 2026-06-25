@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -37,6 +37,17 @@ export class CompaniesService {
 
     if (!isValidCnpj(cnpj)) {
       throw new BadRequestException('Informe um CNPJ valido.');
+    }
+
+    const existingCompany = await this.companiesRepository.findOne({
+      where: { cnpj },
+    });
+
+    if (existingCompany) {
+      this.logger.warn(
+        `Tentativa de criar empresa com CNPJ duplicado: ${cnpj} (empresa existente id=${existingCompany.id})`,
+      );
+      throw new ConflictException('Já existe uma empresa cadastrada com este CNPJ.');
     }
 
     const company = this.companiesRepository.create({

@@ -234,7 +234,7 @@ export function DeliveryFinalizationScreen({
           </View>
           <View style={styles.heroMetricGrid}>
             <View style={styles.heroMetricBlock}>
-              <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Criada em</Text>
+              <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Data de criação</Text>
               <Text style={[styles.heroMetricValue, { color: theme.colors.accentText }]} numberOfLines={1}>{formatDateTime(route.params.delivery.createdAt)}</Text>
             </View>
             <View style={styles.heroMetricBlock}>
@@ -243,15 +243,15 @@ export function DeliveryFinalizationScreen({
             </View>
           </View>
           <View style={styles.destinationPanel}>
-            <Text style={[styles.destinationLabel, { color: theme.colors.accentText }]}>Destino para baixa</Text>
+            <Text style={[styles.destinationLabel, { color: theme.colors.accentText }]}>Endereço</Text>
             <Text style={[styles.destinationText, { color: theme.colors.accentText }]}>{route.params.delivery.destinationAddress}</Text>
           </View>
         </View>
 
         <DeliveryDetailsSummary
           details={route.params.delivery.details}
-          emptyMessage="Nenhum detalhe de carga informado para esta entrega."
-          title="Conferencia da carga"
+          emptyMessage="Nenhum detalhe da carga informado para esta entrega."
+          title="Detalhes da carga"
         />
 
         <AppCard>
@@ -275,7 +275,7 @@ export function DeliveryFinalizationScreen({
             <TextInput
               accessibilityLabel="Nome do recebedor"
               onChangeText={setReceiverName}
-              placeholder="Ex.: Maria da Silva"
+              placeholder="Digite o nome"
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
@@ -301,7 +301,7 @@ export function DeliveryFinalizationScreen({
               accessibilityLabel="Documento do recebedor"
               keyboardType="number-pad"
               onChangeText={(value) => setReceiverDocument(maskReceiverDocument(value))}
-              placeholder="CPF ou RG validos."
+              placeholder="Digite o numero do documento"
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,
@@ -321,12 +321,12 @@ export function DeliveryFinalizationScreen({
               <View style={[styles.fieldIconDot, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <UsersIcon color={theme.colors.primary} />
               </View>
-              <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco ou grau</Text>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Parentesco</Text>
             </View>
             <TextInput
               accessibilityLabel="Parentesco ou grau"
               onChangeText={setReceiverRelation}
-              placeholder="Ex.: Irmao, primo, porteiro"
+              placeholder="Irmao, pai, porteiro"
               placeholderTextColor={theme.colors.textMuted}
               style={[
                 styles.input,

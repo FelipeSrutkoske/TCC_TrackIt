@@ -119,7 +119,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
           {isSummaryExpanded ? (
             <View style={styles.expandedContent}>
               <Text style={[styles.dispatchSubtitle, { color: theme.colors.accentText }]}>
-                Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.
+                Consulte suas entregas atuais e entregas que estao aguardando para serem iniciadas.
               </Text>
 
               <View style={styles.metricGrid}>
@@ -131,7 +131,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
                 >
                   <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Ativas</Text>
                   <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{deliveries.length}</Text>
-                  <Text style={[styles.metricBlockHint, { color: theme.colors.accentText }]}>total na fila</Text>
+                  <Text style={[styles.metricBlockHint, { color: theme.colors.accentText }]}>Total na fila</Text>
                 </View>
                 <View
                   style={[
@@ -142,7 +142,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
                   <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Em rota</Text>
                   <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{inRouteDeliveries}</Text>
                   <Text style={[styles.metricBlockHint, { color: theme.colors.accentText }]}>
-                    {deliveries.length > 0 ? `${Math.round(inRouteRatio * 100)}% em deslocamento` : 'aguardando'}
+                    {deliveries.length > 0 ? `${Math.round(inRouteRatio * 100)}% Em deslocamento` : 'Aguardando'}
                   </Text>
                 </View>
                 <View
@@ -154,7 +154,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
                   <Text style={[styles.metricBlockLabel, { color: theme.colors.accentText }]}>Pendente</Text>
                   <Text style={[styles.metricBlockValue, { color: theme.colors.accentText }]}>{awaitingDeliveries}</Text>
                   <Text style={[styles.metricBlockHint, { color: theme.colors.accentText }]}>
-                    {awaitingDeliveries === 0 ? 'nenhuma para iniciar' : 'pronta para sair'}
+                    {awaitingDeliveries === 0 ? 'Nenhuma para iniciar' : 'Pronta para iniciar'}
                   </Text>
                 </View>
               </View>
@@ -162,10 +162,7 @@ export function CurrentDeliveriesScreen({ navigation }: CurrentDeliveriesScreenP
               <View style={styles.compositionSection}>
                 <View style={styles.compositionHeader}>
                   <Text style={[styles.compositionLabel, { color: theme.colors.accentText }]}>
-                    Composicao da fila
-                  </Text>
-                  <Text style={[styles.compositionHint, { color: theme.colors.accentText }]}>
-                    distribuicao atual
+                    Quantidade de entregas
                   </Text>
                 </View>
                 <View style={styles.compositionBar}>

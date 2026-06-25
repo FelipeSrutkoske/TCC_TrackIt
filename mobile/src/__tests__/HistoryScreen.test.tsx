@@ -86,10 +86,10 @@ describe('HistoryScreen', () => {
       expect(mockGetDeliveryHistory).toHaveBeenCalledWith('token-1');
     });
 
-    expect(await screen.findByText('Leitura consolidada')).toBeOnTheScreen();
+    expect(await screen.findByText('Dados de entregas')).toBeOnTheScreen();
     expect(screen.getByTestId('history-scroll')).toBeOnTheScreen();
-    expect(screen.getByText('Historico operacional')).toHaveStyle({ color: '#F7FFF9' });
-    expect(screen.getByText('Resumo das entregas')).toBeOnTheScreen();
+    expect(screen.getByText('Historico de entregas')).toHaveStyle({ color: '#F7FFF9' });
+    expect(screen.getByText('Seus dados de entrega')).toBeOnTheScreen();
     expect(await screen.findByText('25%')).toBeOnTheScreen();
     expect(screen.getByText('Concluidas')).toHaveStyle({ fontSize: 12 });
     expect(screen.getByText('Em rota')).toHaveStyle({ fontSize: 12 });

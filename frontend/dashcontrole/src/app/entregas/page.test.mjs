@@ -28,7 +28,7 @@ test('vinculo de motorista so fica disponivel para entrega aguardando motorista'
   assert.match(source, /setModalMotoristasAberto\(true\)/);
 });
 
-test('listagem de entregas nao monta comprovante pesado', () => {
+test('listagem de entregas monta comprovante dentro do padrao', () => {
   const source = fs.readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
 
   assert.doesNotMatch(source, /DeliveryProofModal/);

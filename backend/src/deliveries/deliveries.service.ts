@@ -258,7 +258,7 @@ export class DeliveriesService {
           status: StatusEntrega.EM_ROTA,
         },
       ],
-      relations: ['company', 'occurrences', 'finalization', 'details'],
+      relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization', 'details'],
       order: { id: 'ASC' },
     });
 
@@ -284,7 +284,7 @@ export class DeliveriesService {
           status: StatusEntrega.CANCELADO,
         },
       ],
-      relations: ['company', 'occurrences', 'finalization', 'details'],
+      relations: ['company', 'driver', 'driver.user', 'occurrences', 'finalization', 'details'],
       order: { id: 'DESC' },
     });
 

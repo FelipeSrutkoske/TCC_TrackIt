@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -19,6 +20,7 @@ const ToastContext = createContext<ToastContextData>({} as ToastContextData);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const canUseDom = typeof document !== 'undefined';
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -33,30 +35,40 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }, 5000);
   }, [removeToast]);
 
+  const toastContainer = (
+    <div
+      aria-live="polite"
+      className="fixed left-1/2 top-4 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-2 sm:top-6"
+    >
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          role="status"
+          className={`flex items-start justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-bold text-white shadow-2xl ring-1 ring-black/10 transition-all duration-300 ${
+            toast.type === 'success' ? 'border-emerald-300/40 bg-emerald-600' :
+            toast.type === 'error' ? 'border-red-300/40 bg-red-600' :
+            toast.type === 'warning' ? 'border-amber-300/40 bg-amber-500 text-[#1f2320]' :
+            'border-blue-300/40 bg-blue-600'
+          }`}
+        >
+          <span className="leading-relaxed">{toast.message}</span>
+          <button
+            aria-label="Fechar notificacao"
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-lg leading-none transition hover:bg-white/20 ${toast.type === 'warning' ? 'text-[#1f2320]' : 'text-white'}`}
+            onClick={() => removeToast(toast.id)}
+            type="button"
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`px-4 py-3 rounded-md shadow-lg text-white font-medium transition-all duration-300 transform flex items-center gap-3 ${
-              toast.type === 'success' ? 'bg-green-500' :
-              toast.type === 'error' ? 'bg-red-500' :
-              toast.type === 'warning' ? 'bg-orange-500' :
-              'bg-blue-500'
-            }`}
-          >
-            <span>{toast.message}</span>
-            <button 
-              onClick={() => removeToast(toast.id)} 
-              className="text-white opacity-80 hover:opacity-100 flex items-center justify-center text-xl pb-1"
-            >
-              &times;
-            </button>
-          </div>
-        ))}
-      </div>
+      {canUseDom && toasts.length > 0 ? createPortal(toastContainer, document.body) : null}
     </ToastContext.Provider>
   );
 };

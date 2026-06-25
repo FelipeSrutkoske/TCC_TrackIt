@@ -139,14 +139,24 @@ export class UsersService {
     }
 
     const effectiveUserData = this.normalizeUserData({ ...user, ...userData });
-    const effectiveDriverProfile = this.normalizeDriverProfile({
-      cnh: driverProfile?.cnh || user.driverProfile?.cnh,
-      placaVeiculo: driverProfile?.placaVeiculo || user.driverProfile?.placaVeiculo,
-    });
+
+    // No update, so valida CNH e placa quando o frontend envia driverProfile.
+    // Isso evita que dados legados no banco bloqueiem edicao de nome, e-mail ou status.
+    const effectiveDriverProfile = driverProfile
+      ? this.normalizeDriverProfile({
+          cnh: driverProfile.cnh || user.driverProfile?.cnh,
+          placaVeiculo: driverProfile.placaVeiculo || user.driverProfile?.placaVeiculo,
+        })
+      : null;
 
     this.validateUserRules(
       { ...effectiveUserData, driverProfile: effectiveDriverProfile },
       'update',
+      {
+        validatePlate: Boolean(driverProfile),
+        validateCnh: Boolean(driverProfile),
+        existingDriverProfile: user.driverProfile as { cnh?: string | null; placaVeiculo?: string | null } | null,
+      },
     );
 
     if (userData.email && userData.email !== user.email) {
@@ -171,7 +181,46 @@ export class UsersService {
     }
     Object.assign(user, userData);
     const savedUser = await this.usersRepository.save(user);
+
+    this.logger.log(
+      `Usuario atualizado id=${savedUser.id} email=${savedUser.email} tipo=${savedUser.tipoUsuario}${savedUser.companyId ? ` companyId=${savedUser.companyId}` : ''}`,
+    );
+
     return this.withoutPassword(savedUser);
+  }
+
+  async updateScoped(
+    id: number,
+    data: UpdateUserDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<User> {
+    this.logger.log(
+      `Usuario id=${currentUser.id} tipo=${currentUser.tipoUsuario} iniciando atualizacao do usuario id=${id}`,
+    );
+
+    if (currentUser.tipoUsuario === TipoUsuario.MOTORISTA) {
+      this.logger.warn(`Motorista id=${currentUser.id} tentou alterar usuario id=${id}`);
+      throw new ForbiddenException('Motorista nao pode alterar usuarios.');
+    }
+
+    const targetUser = await this.findOne(id);
+
+    if (targetUser.tipoUsuario === TipoUsuario.ADMIN) {
+      this.logger.warn(`Tentativa de alterar usuario ADMIN bloqueada id=${id}`);
+      throw new ForbiddenException('Acesso de administrador nao pode ser alterado.');
+    }
+
+    if (
+      currentUser.tipoUsuario === TipoUsuario.DASHBOARD &&
+      targetUser.companyId !== currentUser.companyId
+    ) {
+      this.logger.warn(
+        `Usuario DASHBOARD id=${currentUser.id} tentou alterar usuario de outra empresa id=${id}`,
+      );
+      throw new ForbiddenException('Voce nao pode alterar usuarios de outra empresa.');
+    }
+
+    return this.update(id, data);
   }
 
   async remove(id: number): Promise<void> {
@@ -191,6 +240,11 @@ export class UsersService {
       driverProfile?: { cnh?: string | null; placaVeiculo?: string | null } | null;
     },
     operation: 'create' | 'update',
+    options?: {
+      validatePlate?: boolean;
+      validateCnh?: boolean;
+      existingDriverProfile?: { cnh?: string | null; placaVeiculo?: string | null } | null;
+    },
   ): void {
     if (data.tipoUsuario === TipoUsuario.ADMIN) {
       return;
@@ -219,29 +273,34 @@ export class UsersService {
       throw new BadRequestException('Informe a empresa para criar um motorista');
     }
 
+    const effectiveCnh = data.driverProfile?.cnh || options?.existingDriverProfile?.cnh;
+
     if (
-      operation === 'create' &&
       data.tipoUsuario === TipoUsuario.MOTORISTA &&
-      !data.driverProfile?.cnh
+      !effectiveCnh
     ) {
       throw new BadRequestException('Informe a CNH para criar um motorista');
     }
 
-    if (data.tipoUsuario === TipoUsuario.MOTORISTA && data.driverProfile?.cnh?.length !== 11) {
+    const shouldValidateCnh = options?.validateCnh !== false;
+    if (
+      data.tipoUsuario === TipoUsuario.MOTORISTA &&
+      data.driverProfile?.cnh &&
+      shouldValidateCnh &&
+      data.driverProfile.cnh.length !== 11
+    ) {
       throw new BadRequestException('Informe um numero valido de registro da CNH.');
     }
 
     const placaVeiculo = data.driverProfile?.placaVeiculo;
-    if (data.tipoUsuario === TipoUsuario.MOTORISTA && placaVeiculo && !this.isValidVehiclePlate(placaVeiculo)) {
-      throw new BadRequestException('Informe uma placa válida no formato ABC1234 ou ABC1D23.');
-    }
-
+    const shouldValidatePlate = options?.validatePlate !== false;
     if (
-      operation === 'update' &&
       data.tipoUsuario === TipoUsuario.MOTORISTA &&
-      !data.driverProfile?.cnh
+      placaVeiculo &&
+      shouldValidatePlate &&
+      !this.isValidVehiclePlate(placaVeiculo)
     ) {
-      throw new BadRequestException('Informe a CNH para criar um motorista');
+      throw new BadRequestException('Informe uma placa válida no formato ABC1234 ou ABC1D23.');
     }
   }
 

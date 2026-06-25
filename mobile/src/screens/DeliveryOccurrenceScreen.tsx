@@ -180,12 +180,12 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
             <View style={styles.heroHeaderText}>
               <View style={styles.statusPillRow}>
                 <View style={[styles.liveDot, { backgroundColor: theme.colors.statusDanger }]} />
-                <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Ocorrencia operacional</Text>
+                <Text style={[styles.heroEyebrow, { color: theme.colors.accentText }]}>Ocorrencia de transporte</Text>
               </View>
               <Text style={[styles.heroTitle, { color: theme.colors.accentText }]}>{getDeliveryDisplayLabel(route.params.delivery)}</Text>
             </View>
           </View>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Registre o problema com GPS e comprovante.</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.accentText }]}>Preencha os dados da ocorrencia para registrar o problema.</Text>
           <View style={styles.heroMetricGrid}>
             <View style={styles.heroMetricBlock}>
               <Text style={[styles.heroMetricLabel, { color: theme.colors.accentText }]}>Status</Text>
@@ -197,7 +197,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
             </View>
           </View>
           <View style={styles.contextPanel}>
-            <Text style={[styles.contextLabel, { color: theme.colors.accentText }]}>Destino da entrega</Text>
+            <Text style={[styles.contextLabel, { color: theme.colors.accentText }]}>Endereço da entrega</Text>
             <Text style={[styles.contextValue, { color: theme.colors.accentText }]}>{route.params.delivery.destinationAddress}</Text>
           </View>
         </View>
@@ -243,13 +243,13 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
             <View style={[styles.fieldIconDot, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
               <PenIcon color={theme.colors.primary} />
             </View>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Descricao do problema</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>Descricao do ocorrido</Text>
           </View>
           <TextInput
             accessibilityLabel="Descricao da ocorrencia"
             multiline
             onChangeText={setDescription}
-            placeholder="Explique o que aconteceu no local da entrega."
+            placeholder="Explique o que aconteceu durante a entrega."
             placeholderTextColor={theme.colors.textMuted}
             style={[
               styles.textArea,
@@ -280,7 +280,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
           {photoPreviewUri ? (
             <Image source={{ uri: photoPreviewUri }} style={styles.photoPreview} />
           ) : (
-            <Text style={[styles.helper, { color: theme.colors.textMuted }]}>Foto obrigatoria para todos os tipos exceto Outros.</Text>
+            <Text style={[styles.helper, { color: theme.colors.textMuted }]}>Anexe uma foto para comprovar a ocorrencia.</Text>
           )}
 
           {error ? (
@@ -295,7 +295,7 @@ export function DeliveryOccurrenceScreen({ navigation, route }: DeliveryOccurren
             onPress={() => {
               void handleSubmit();
             }}
-            title={isSubmitting ? 'Enviando...' : 'Enviar ocorrencia'}
+            title={isSubmitting ? 'Enviando...' : 'Registrar ocorrencia'}
           />
         </AppCard>
       </ScrollView>

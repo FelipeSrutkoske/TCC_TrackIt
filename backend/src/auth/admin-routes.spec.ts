@@ -68,7 +68,7 @@ describe('administrative route roles', () => {
     expectRoles(UsersController.prototype, 'create');
     expectRoles(UsersController.prototype, 'findAll');
     expectRoles(UsersController.prototype, 'findOne');
-    expectRoles(UsersController.prototype, 'update', ADMIN_ROLES);
+    expectRoles(UsersController.prototype, 'update', ADMIN_DASHBOARD_ROLES);
     expectRoles(UsersController.prototype, 'remove', ADMIN_ROLES);
   });
 

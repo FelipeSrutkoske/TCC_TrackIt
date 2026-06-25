@@ -9,7 +9,7 @@ test('criacao de entrega valida numero no endereco antes do geocoding', () => {
   assert.ok(validationBlock, 'validarFormularioCriarEntrega deve existir');
   assert.match(source, /function addressHasNumber/);
   assert.match(validationBlock[0], /!addressHasNumber\(destinationAddress\)/);
-  assert.match(validationBlock[0], /Informe o número do endereço para orientar a entrega\./);
+  assert.match(validationBlock[0], /Informe o número do endereço para localizar o destino corretamente/);
   assert.match(source, /const erroValidacao = validarFormularioCriarEntrega\(\);[\s\S]+?if \(erroValidacao\)[\s\S]+?return;[\s\S]+?geocodeAddress\(destinationAddress\)/);
 });
 

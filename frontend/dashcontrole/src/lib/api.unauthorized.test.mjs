@@ -19,7 +19,7 @@ function loadApiModule(contextOverrides = {}) {
   return context.exports;
 }
 
-test('apiFetch limpa sessao e redireciona para login quando a API retorna 401', async () => {
+test('apiFetch limpa sessao e redireciona para login quando a API retorna 401 (Unauthorized)', async () => {
   const removedKeys = [];
   const cookieWrites = [];
   const location = { href: '/entregas' };

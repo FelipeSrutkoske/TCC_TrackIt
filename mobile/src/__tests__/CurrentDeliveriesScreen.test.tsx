@@ -61,7 +61,7 @@ describe('CurrentDeliveriesScreen', () => {
     });
 
     expect(await screen.findByText('Operacao ativa')).toBeOnTheScreen();
-    expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Consulte suas entregas atuais e entregas que estao aguardando para serem iniciadas.')).not.toBeOnTheScreen();
     expect(screen.getByText('Clique para expandir')).toBeOnTheScreen();
     expect(screen.queryByText('2 Ativas')).not.toBeOnTheScreen();
     expect(screen.queryByText('1 Em rota')).not.toBeOnTheScreen();
@@ -94,19 +94,19 @@ describe('CurrentDeliveriesScreen', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Expandir resumo da operacao' }));
 
-    expect(screen.getByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).toBeOnTheScreen();
+    expect(screen.getByText('Consulte suas entregas atuais e entregas que estao aguardando para serem iniciadas.')).toBeOnTheScreen();
     expect(screen.queryByText('2 Ativas')).not.toBeOnTheScreen();
     expect(screen.queryByText('1 Em rota')).not.toBeOnTheScreen();
     expect(screen.queryByText('1 Pendente')).not.toBeOnTheScreen();
-    expect(screen.getByText('total na fila')).toBeOnTheScreen();
-    expect(screen.getByText('50% em deslocamento')).toBeOnTheScreen();
-    expect(screen.getByText('pronta para sair')).toBeOnTheScreen();
-    expect(screen.getByText('Composicao da fila')).toBeOnTheScreen();
+    expect(screen.getByText('Total na fila')).toBeOnTheScreen();
+    expect(screen.getByText('50% Em deslocamento')).toBeOnTheScreen();
+    expect(screen.getByText('Pronta para iniciar')).toBeOnTheScreen();
+    expect(screen.getByText('Quantidade de entregas')).toBeOnTheScreen();
     expect(screen.getByText(/^Sincronizado/)).toBeOnTheScreen();
 
     fireEvent.press(screen.getByRole('button', { name: 'Recolher resumo da operacao' }));
 
-    expect(screen.queryByText('Consulte as rotas em andamento e as proximas entregas disponiveis para inicio.')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Consulte suas entregas atuais e entregas que estao aguardando para serem iniciadas.')).not.toBeOnTheScreen();
   });
 
   it('shows an operational empty state when there are no current deliveries', async () => {

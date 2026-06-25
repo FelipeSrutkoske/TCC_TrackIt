@@ -45,9 +45,13 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles(TipoUsuario.ADMIN)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @Roles(TipoUsuario.ADMIN, TipoUsuario.DASHBOARD)
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.updateScoped(+id, updateUserDto, user);
   }
 
   @Delete(':id')

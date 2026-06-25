@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-test('sidebar mostra apenas navegacao de produto para apresentacao final', () => {
+test('sidebar mostra paginas corretas', () => {
   const source = fs.readFileSync(new URL('./Sidebar.tsx', import.meta.url), 'utf8');
   const navItemsBlock = source.match(/const navItems: NavItem\[] = \[[\s\S]+?\n\];/);
 
